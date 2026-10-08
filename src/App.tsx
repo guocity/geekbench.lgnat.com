@@ -6,9 +6,9 @@ import {
 import { 
   Cpu, Activity, Zap, Layers, Search, AlertCircle, RefreshCw, 
   Monitor, Database, LayoutDashboard, ChevronDown, ChevronUp, ArrowUpDown,
-  X
+  X, ExternalLink, Image, ZoomIn
 } from 'lucide-react';
-import { AppleSiliconBenchmark, ProcessedItem, AggregatedChipGroup } from './types';
+import { AppleSiliconBenchmark, ProcessedItem, AggregatedChipGroup, ProcessorDetail, RAMConfiguration, DieShot } from './types';
 
 const FAMILY_COLORS: Record<string, string> = {
   "M1": "#2563eb", // Blue-600
@@ -28,7 +28,7 @@ const TIER_COLORS: Record<string, string> = {
 };
 
 const TIER_LABELS: Record<string, string> = {
-  "A-Series": "A",
+  "A-Series": "A-Series",
   "base": "Base",
   "pro": "Pro",
   "max": "Max",
@@ -64,19 +64,16 @@ const formatChipName = (family: string, tierStr: string, chip?: string): string 
     const aSeriesMap: Record<string, string> = { 'M0': 'A14', 'M1': 'A15', 'M2': 'A16', 'M3': 'A17 Pro', 'M4': 'A18', 'M5': 'A19', 'M6': 'A20' };
     return aSeriesMap[family] || `${family} A-Series`;
   }
-  const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-  if (tierStr.startsWith('base')) {
-    const extra = tierStr.replace('base', '').trim();
-    return extra ? `${family} ${extra}` : family;
-  }
-  return `${family} ${capitalize(tierStr)}`;
+  const tierFormatted = TIER_LABELS[tierStr] || tierStr;
+  return tierFormatted === 'Base' ? family : `${family} ${tierFormatted}`;
 };
 
-const getChipsetTag = (item: AppleSiliconBenchmark | ProcessedItem): string => {
-  return item.chip || formatChipName(item.family, item.tier);
+const getChipsetTag = (item: AppleSiliconBenchmark) => {
+  if (item.chip) return item.chip;
+  return formatChipName(item.family || '', item.tier || '');
 };
 
-// --- Helper Components ---
+// --- Reusable UI Elements ---
 interface CardProps {
   children: React.ReactNode;
   className?: string;
@@ -189,49 +186,46 @@ const MetricScatter = React.memo<MetricScatterProps>(({
   xKey, 
   xLabel, 
   isYear = false, 
-  sortMetric, 
   filteredData, 
-  onGroupSelect, 
   onSelectDetail, 
   selectedGroup, 
-  selectedDevice, 
   filterMode 
 }) => {
-  const colorMap = filterMode === 'family' ? FAMILY_COLORS : TIER_COLORS;
+  const colorMap = filterMode === 'tier' ? TIER_COLORS : FAMILY_COLORS;
   const groupKey = filterMode === 'family' ? 'family' : 'tier';
 
+  const xDomain = useMemo(() => {
+    if (isYear) return [2019.5, 2026.5];
+    const vals = filteredData.map(d => (d as any)[xKey]).filter(v => v !== undefined && v > 0);
+    return vals.length ? [Math.min(...vals) - 1, Math.max(...vals) + 1] : ['auto', 'auto'];
+  }, [filteredData, xKey, isYear]);
+
   return (
-    <div className={`flex flex-col h-[255px] transition-colors duration-200 p-2.5 rounded-2xl border shadow-sm ${sortMetric === metricKey ? 'border-blue-400 bg-blue-50/20 ring-2 ring-blue-50' : 'border-slate-200 bg-white'}`}>
-      <div className="flex justify-between items-center mb-1 px-1.5 shrink-0">
-        <div>
-          <h3 className={`font-bold text-sm ${sortMetric === metricKey ? 'text-blue-600' : 'text-slate-700'}`}>{title}</h3>
-          <p className="text-[10px] text-slate-400">Score vs {xLabel}</p>
-        </div>
+    <Card className="p-3">
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="text-xs font-bold text-slate-800 tracking-tight">{title}</h4>
+        <span className="text-[10px] text-slate-400 font-medium">vs {xLabel}</span>
       </div>
-      <div className="flex-1 w-full min-h-0">
+      <div className="h-44 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
-            <CartesianGrid stroke="#f1f5f9" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
             <XAxis 
               type="number" 
               dataKey={xKey} 
-              name={xLabel} 
+              domain={xDomain as any} 
+              tick={{ fontSize: 9, fill: '#94a3b8' }} 
               axisLine={false} 
-              tickLine={false} 
-              tick={{ fill: '#94a3b8', fontSize: 10 }}
-              domain={isYear ? [2020, 2026] : ['auto', 'auto']}
-              ticks={isYear ? [2020, 2021, 2022, 2023, 2024, 2025, 2026] : undefined}
-              allowDecimals={false}
-              dy={2}
+              tickLine={false}
+              tickFormatter={(v) => isYear ? `'${v.toString().slice(-2)}` : v}
             />
             <YAxis 
               type="number" 
               dataKey={`scores.${metricKey}`} 
-              name="Score" 
-              axisLine={false}
+              tick={{ fontSize: 9, fill: '#94a3b8' }} 
+              axisLine={false} 
               tickLine={false}
-              tick={{ fill: '#94a3b8', fontSize: 10 }}
-              tickFormatter={(val: number) => val >= 1000 ? `${(val/1000).toFixed(0)}k` : `${val}`}
+              tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}
               width={38}
             />
             <RechartsTooltip 
@@ -242,8 +236,11 @@ const MetricScatter = React.memo<MetricScatterProps>(({
                   if (d.scores[metricKey] === 0) return null;
 
                   return (
-                    <div className="bg-white/95 backdrop-blur-sm p-2 rounded-lg shadow-lg border border-slate-200 text-[11px] z-50">
-                      <div className="font-bold text-slate-800 mb-1">{d.model}</div>
+                    <div className="bg-white/95 backdrop-blur-sm p-2.5 rounded-xl shadow-lg border border-slate-200 text-[11px] z-50 min-w-[170px]">
+                      <div className="font-bold text-slate-800 mb-1 flex items-center justify-between gap-2">
+                        <span>{d.model}</span>
+                        {d.ram && <span className="text-[9px] bg-purple-50 text-purple-700 px-1 py-0.2 rounded font-mono">{d.ram}</span>}
+                      </div>
                       <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-slate-600">
                         <span className="capitalize">{metricKey === 'bandwidth' ? 'Bandwidth' : metricKey}:</span> 
                         <span className="text-right font-mono font-bold text-emerald-600">
@@ -273,32 +270,16 @@ const MetricScatter = React.memo<MetricScatterProps>(({
                   stroke="none"
                   shape="circle"
                   isAnimationActive={false}
-                  onClick={(entry: any) => {
-                    if (entry && entry.payload) {
-                      onSelectDetail(entry.payload as ProcessedItem);
-                    } else {
-                      onGroupSelect(key);
-                    }
-                  }}
+                  onClick={(d) => onSelectDetail(d as ProcessedItem)}
                   cursor="pointer"
-                >
-                  {scatterData.map((entry, index) => {
-                    const isGroupFaded = selectedGroup && selectedGroup !== key;
-                    const isDeviceFaded = selectedDevice && entry.device !== selectedDevice;
-                    return (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fillOpacity={isGroupFaded || isDeviceFaded ? 0.1 : 1} 
-                      />
-                    );
-                  })}
-                </Scatter>
+                  opacity={(selectedGroup && selectedGroup !== key) ? 0.15 : 0.85}
+                />
               );
             })}
           </ScatterChart>
         </ResponsiveContainer>
       </div>
-    </div>
+    </Card>
   );
 });
 
@@ -306,11 +287,11 @@ interface MetricBarChartProps {
   title: string;
   subtitle: string;
   badgeText: string;
-  badgeClass: string;
+  badgeClass?: string;
   data: AggregatedChipGroup[];
   dataKey: string;
-  tooltipRanges: (d: AggregatedChipGroup) => { range: string; avg: string };
   valueFormat: (v: number) => string;
+  tooltipRanges: (d: AggregatedChipGroup) => { range: string; avg: string };
   onGroupSelect: (group: string) => void;
   selectedGroup: string | null;
   selectedDevice: string | null;
@@ -321,62 +302,62 @@ const MetricBarChart = React.memo<MetricBarChartProps>(({
   title, 
   subtitle, 
   badgeText, 
-  badgeClass, 
+  badgeClass = "bg-blue-50 text-blue-600",
   data, 
   dataKey, 
-  tooltipRanges, 
   valueFormat, 
+  tooltipRanges, 
   onGroupSelect, 
   selectedGroup, 
   selectedDevice, 
   filterMode 
 }) => {
-  const colorMap = filterMode === 'family' ? FAMILY_COLORS : TIER_COLORS;
+  const colorMap = filterMode === 'tier' ? TIER_COLORS : FAMILY_COLORS;
   const groupKey = filterMode === 'family' ? 'family' : 'tier';
 
   return (
-    <Card className="p-3.5 h-[520px] flex flex-col overflow-hidden">
-      <div className="flex justify-between items-start mb-2 shrink-0">
+    <Card className="p-3">
+      <div className="flex items-center justify-between mb-2">
         <div>
-          <h3 className="font-bold text-slate-800 text-sm">{title}</h3>
-          <p className="text-[10px] text-slate-500">{subtitle}</p>
+          <h4 className="text-xs font-bold text-slate-800 tracking-tight">{title}</h4>
+          <p className="text-[10px] text-slate-400">{subtitle}</p>
         </div>
-        <div className={`text-[9px] font-semibold px-2 py-1 rounded uppercase tracking-wide ${badgeClass}`}>
+        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${badgeClass}`}>
           {badgeText}
-        </div>
+        </span>
       </div>
-      <div className="flex-1 w-full min-h-0 overflow-hidden">
+      <div className="h-44 w-full">
         <ResponsiveContainer width="100%" height="100%">
-            <BarChart 
-              data={data} 
-              layout="vertical" 
-              margin={{ left: -5, right: 65, top: 0, bottom: 0 }}
-              barCategoryGap="8%"
-            >
-              <CartesianGrid horizontal={true} vertical={false} stroke="#f1f5f9" />
-              <XAxis type="number" hide />
-              <YAxis 
-                type="category" 
-                dataKey="displayName" 
-                width={65} 
-                tick={({ x, y, payload }: any) => (
-                  <text 
-                    x={x} 
-                    y={y} 
-                    dy={3} 
-                    textAnchor="end" 
-                    fill="#64748b" 
-                    fontSize={8.5} 
-                    fontWeight={500}
-                    style={{ whiteSpace: 'nowrap' }}
-                  >
-                    {payload.value}
-                  </text>
-                )}
-                axisLine={false} 
-                tickLine={false}
-                interval={0}
-              />
+          <BarChart 
+            data={data} 
+            layout="vertical" 
+            margin={{ top: 0, right: 30, bottom: 0, left: 10 }}
+            barCategoryGap={1}
+          >
+            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+            <XAxis type="number" hide domain={[0, 'dataMax']} />
+            <YAxis 
+              type="category" 
+              dataKey="displayName" 
+              width={65} 
+              tick={({ x, y, payload }) => (
+                <text 
+                  x={x} 
+                  y={y} 
+                  dy={3} 
+                  textAnchor="end" 
+                  fill="#64748b" 
+                  fontSize={8.5} 
+                  fontWeight={500}
+                  style={{ whiteSpace: 'nowrap' }}
+                >
+                  {payload.value}
+                </text>
+              )}
+              axisLine={false} 
+              tickLine={false}
+              interval={0}
+            />
             <RechartsTooltip 
               cursor={{fill: '#f8fafc'}} 
               content={({ active, payload }) => {
@@ -424,14 +405,108 @@ const MetricBarChart = React.memo<MetricBarChartProps>(({
   );
 });
 
+// Die Shot Interactive Component
+interface DieShotGalleryProps {
+  dieShots?: DieShot[];
+  chipName: string;
+}
+
+const DieShotGallery: React.FC<DieShotGalleryProps> = ({ dieShots, chipName }) => {
+  const [activeImage, setActiveImage] = useState<DieShot | null>(null);
+
+  if (!dieShots || dieShots.length === 0) return null;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+          <Image className="w-3.5 h-3.5 text-blue-600" />
+          Silicon Die Shots ({chipName})
+        </h4>
+        <span className="text-[10px] text-slate-400 font-medium">Click to inspect 4K die shot</span>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        {dieShots.map((ds, idx) => (
+          <div 
+            key={idx} 
+            onClick={() => setActiveImage(ds)}
+            className="group relative rounded-xl overflow-hidden border border-slate-200 bg-slate-950 cursor-pointer shadow-sm hover:shadow-md transition-all"
+          >
+            <div className="aspect-[16/10] overflow-hidden bg-slate-900 flex items-center justify-center">
+              <img 
+                src={ds.url} 
+                alt={ds.caption} 
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                loading="lazy"
+              />
+            </div>
+            <div className="p-2 bg-white border-t border-slate-100 flex items-start justify-between gap-1 text-[11px]">
+              <span className="text-slate-700 font-medium line-clamp-1">{ds.caption}</span>
+              <ZoomIn className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Lightbox Modal */}
+      {activeImage && (
+        <div 
+          className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-6 bg-slate-950/85 backdrop-blur-md animate-fade-in"
+          onClick={() => setActiveImage(null)}
+        >
+          <div 
+            className="relative max-w-4xl max-h-[92vh] bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-3 px-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 text-white">
+              <div>
+                <h4 className="text-xs font-bold text-white">{activeImage.caption}</h4>
+                <p className="text-[10px] text-slate-400">{chipName} Microscopic Die Floorplan</p>
+              </div>
+              <div className="flex items-center gap-2">
+                {activeImage.originalUrl && (
+                  <a 
+                    href={activeImage.originalUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-1 bg-slate-800 px-2 py-1 rounded transition"
+                  >
+                    <span>Original Source</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+                <button 
+                  onClick={() => setActiveImage(null)} 
+                  className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <div className="p-2 overflow-auto flex items-center justify-center bg-black/70 max-h-[75vh]">
+              <img 
+                src={activeImage.url} 
+                alt={activeImage.caption} 
+                className="max-h-[72vh] max-w-full object-contain rounded-lg"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Device Details Modal
 interface DeviceDetailModalProps {
   item: ProcessedItem | null;
+  processor?: ProcessorDetail;
   onClose: () => void;
 }
 
-const DeviceDetailModal: React.FC<DeviceDetailModalProps> = ({ item, onClose }) => {
+const DeviceDetailModal: React.FC<DeviceDetailModalProps> = ({ item, processor, onClose }) => {
   if (!item) return null;
+  const pInfo = processor || item.processor;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in" onClick={onClose}>
@@ -446,6 +521,11 @@ const DeviceDetailModal: React.FC<DeviceDetailModalProps> = ({ item, onClose }) 
               <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
                 {item.chip || item.family}
               </span>
+              {item.ram && (
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-mono">
+                  {item.ram}
+                </span>
+              )}
               <span className="text-xs font-medium text-slate-400">
                 {item.year}
               </span>
@@ -496,22 +576,82 @@ const DeviceDetailModal: React.FC<DeviceDetailModalProps> = ({ item, onClose }) 
             </div>
           </div>
 
+          {/* RAM Configurations & Scaling Card */}
+          {pInfo?.ramConfigurations && pInfo.ramConfigurations.length > 0 && (
+            <div className="bg-purple-50/70 border border-purple-200/80 rounded-xl p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-purple-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5 text-purple-600" />
+                  RAM Configurations & Memory Speed (from processor.json)
+                </span>
+                <span className="text-[10px] text-purple-700 font-mono bg-purple-100 px-1.5 py-0.5 rounded">
+                  {item.memoryBusWidth || pInfo.memoryBusWidth || '128-bit'} Bus
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                {pInfo.ramConfigurations.map((rc, idx) => {
+                  const isCurrent = item.ram ? (item.ram === rc.ram || rc.ram.includes(item.ram.replace(' RAM', '').trim())) : false;
+                  return (
+                    <div 
+                      key={idx} 
+                      className={`p-2.5 rounded-lg border transition-all ${
+                        isCurrent 
+                          ? 'bg-white border-purple-400 shadow-sm ring-1 ring-purple-400' 
+                          : 'bg-white/80 border-purple-100/80'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                          {rc.ram}
+                          {isCurrent && <span className="text-[9px] bg-purple-100 text-purple-700 px-1 rounded font-semibold">Current Spec</span>}
+                        </span>
+                        <span className="font-mono font-bold text-purple-700 text-xs">{rc.memoryBandwidth} GB/s</span>
+                      </div>
+                      <div className="text-[10px] text-slate-500 font-mono flex justify-between">
+                        <span>{rc.memoryType}</span>
+                        <span>{rc.memorySpeed}</span>
+                      </div>
+                      {rc.description && (
+                        <div className="text-[10px] text-slate-600 mt-1.5 pt-1 border-t border-slate-100 leading-tight">
+                          {rc.description}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Die Shot Gallery */}
+          <DieShotGallery dieShots={pInfo?.dieShots} chipName={item.chip || item.family} />
+
           {/* Architecture Specifications */}
           <div className="space-y-2">
             <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Silicon Architecture</h4>
             <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-3 rounded-xl border border-slate-200">
               <div>
                 <span className="text-slate-400 block text-[11px]">Process Node</span>
-                <span className="font-semibold text-slate-800">{item.processNode || 'TSMC Process'}</span>
+                <span className="font-semibold text-slate-800">{item.processNode || pInfo?.processNode || 'TSMC Process'}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">Transistor Tech</span>
+                <span className="font-semibold text-slate-800">{item.transistorTech || pInfo?.transistorTech || 'Advanced FinFET'}</span>
               </div>
               <div>
                 <span className="text-slate-400 block text-[11px]">Packaging</span>
-                <span className="font-semibold text-slate-800">{item.packaging || 'Apple SiP'}</span>
+                <span className="font-semibold text-slate-800">{item.packaging || pInfo?.packaging || 'Apple SiP'}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">Die Area</span>
+                <span className="font-semibold text-slate-800">
+                  {(item.dieSizeMm2 || pInfo?.dieSizeMm2) ? `${item.dieSizeMm2 || pInfo?.dieSizeMm2} mm²` : 'Undisclosed'}
+                </span>
               </div>
               <div>
                 <span className="text-slate-400 block text-[11px]">CPU Configuration</span>
                 <span className="font-semibold text-slate-800">
-                  {item.coreConfig ? `${item.coreConfig} (${item.cpuCores} total)` : `${item.cpuCores} cores`}
+                  {item.coreConfig || pInfo?.coreConfig || `${item.cpuCores} cores`}
                 </span>
               </div>
               <div>
@@ -525,7 +665,9 @@ const DeviceDetailModal: React.FC<DeviceDetailModalProps> = ({ item, onClose }) 
               <div>
                 <span className="text-slate-400 block text-[11px]">Neural Engine (NPU)</span>
                 <span className="font-semibold text-slate-800">
-                  {item.aneTops ? `${item.neuralEngineCores || 16}-core (${item.aneTops} TOPS)` : '16-core ANE'}
+                  {(pInfo?.neuralEngineCores || item.neuralEngineCores) 
+                    ? `${pInfo?.neuralEngineCores || item.neuralEngineCores}-core (${pInfo?.aneTops || item.aneTops || 45} TOPS)` 
+                    : '16-core ANE'}
                 </span>
               </div>
             </div>
@@ -545,11 +687,19 @@ const DeviceDetailModal: React.FC<DeviceDetailModalProps> = ({ item, onClose }) 
               </div>
               <div>
                 <span className="text-slate-400 block text-[11px]">Memory Tech</span>
-                <span className="font-semibold text-slate-800">{item.memoryType || 'Unified Memory'}</span>
+                <span className="font-semibold text-slate-800">{item.memoryType || pInfo?.memoryType || 'Unified Memory'}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">Memory Speed</span>
+                <span className="font-semibold text-slate-800 font-mono">{item.memorySpeed || pInfo?.memorySpeed || '-'}</span>
               </div>
               <div>
                 <span className="text-slate-400 block text-[11px]">System-Level Cache (SLC)</span>
-                <span className="font-semibold text-slate-800">{item.systemCache || (item.slcMB ? `${item.slcMB} MB` : '-')}</span>
+                <span className="font-semibold text-slate-800">{item.systemCache || pInfo?.systemCache || (item.slcMB ? `${item.slcMB} MB` : '-')}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">L2 Shared Cache</span>
+                <span className="font-semibold text-slate-800">{item.l2Cache || pInfo?.l2Cache || '-'}</span>
               </div>
             </div>
           </div>
@@ -577,21 +727,217 @@ const DeviceDetailModal: React.FC<DeviceDetailModalProps> = ({ item, onClose }) 
   );
 };
 
+// Processor Details Modal
+interface ProcessorDetailModalProps {
+  processor: ProcessorDetail | null;
+  onClose: () => void;
+  onFilterDevices?: (chip: string) => void;
+}
+
+const ProcessorDetailModal: React.FC<ProcessorDetailModalProps> = ({ processor, onClose, onFilterDevices }) => {
+  if (!processor) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in" onClick={onClose}>
+      <div 
+        className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="px-5 py-4 border-b border-slate-100 flex items-start justify-between bg-slate-50/50">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                {processor.chip}
+              </span>
+              <span className="text-xs font-medium text-slate-400">
+                {processor.family} · {processor.tier} tier
+              </span>
+              {processor.rayTracing && (
+                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  Hardware RT
+                </span>
+              )}
+            </div>
+            <h3 className="text-lg font-bold text-slate-900">{processor.name}</h3>
+            <p className="text-xs text-slate-500">{processor.processNode} {processor.transistorTech ? `· ${processor.transistorTech}` : ''}</p>
+          </div>
+          <button 
+            onClick={onClose}
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Specs Grid */}
+        <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
+          {/* RAM Configurations & Scaling Card */}
+          {processor.ramConfigurations && processor.ramConfigurations.length > 0 && (
+            <div className="bg-purple-50/70 border border-purple-200/80 rounded-xl p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-purple-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5 text-purple-600" />
+                  RAM Configurations & Memory Bandwidth
+                </span>
+                <span className="text-[10px] text-purple-700 font-mono bg-purple-100 px-1.5 py-0.5 rounded">
+                  {processor.memoryBusWidth || '128-bit'} Bus
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                {processor.ramConfigurations.map((rc, idx) => (
+                  <div key={idx} className="bg-white p-2.5 rounded-lg border border-purple-200">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="font-bold text-slate-800">{rc.ram}</span>
+                      <span className="font-mono font-bold text-purple-700 text-xs">{rc.memoryBandwidth} GB/s</span>
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-mono flex justify-between">
+                      <span>{rc.memoryType}</span>
+                      <span>{rc.memorySpeed}</span>
+                    </div>
+                    {rc.description && (
+                      <div className="text-[10px] text-slate-600 mt-1.5 pt-1 border-t border-slate-100 leading-tight">
+                        {rc.description}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Die Shot Gallery */}
+          <DieShotGallery dieShots={processor.dieShots} chipName={processor.name} />
+
+          {/* Architecture Specifications */}
+          <div className="space-y-2">
+            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Silicon Specifications</h4>
+            <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-3 rounded-xl border border-slate-200">
+              <div>
+                <span className="text-slate-400 block text-[11px]">Process Node</span>
+                <span className="font-semibold text-slate-800">{processor.processNode}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">Transistor Architecture</span>
+                <span className="font-semibold text-slate-800">{processor.transistorTech || 'Advanced FinFET'}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">Die Size</span>
+                <span className="font-semibold text-slate-800">{processor.dieSizeMm2 ? `${processor.dieSizeMm2} mm²` : 'Undisclosed'}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">Packaging</span>
+                <span className="font-semibold text-slate-800">{processor.packaging}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">CPU Configuration</span>
+                <span className="font-semibold text-slate-800">{processor.coreConfig || `${processor.cpuCores} cores`}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">Peak Clock</span>
+                <span className="font-semibold text-slate-800 font-mono">{processor.clock} GHz</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">GPU Cores</span>
+                <span className="font-semibold text-slate-800">
+                  {Array.isArray(processor.gpuCores) ? processor.gpuCores.join(' / ') : processor.gpuCores} cores
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">Neural Engine (NPU)</span>
+                <span className="font-semibold text-slate-800">
+                  {processor.neuralEngineCores}-core ({processor.aneTops} TOPS)
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Memory Architecture */}
+          <div className="space-y-2">
+            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Memory & Cache Subsystem</h4>
+            <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-3 rounded-xl border border-slate-200">
+              <div>
+                <span className="text-slate-400 block text-[11px]">Memory Bandwidth</span>
+                <span className="font-semibold text-purple-700 font-mono">
+                  {processor.memoryBandwidthMin ? `${processor.memoryBandwidthMin} – ${processor.memoryBandwidthMax} GB/s` : `${processor.memoryBandwidth} GB/s`}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">Bus Width</span>
+                <span className="font-semibold text-slate-800 font-mono">{processor.memoryBusWidth}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">Memory Tech</span>
+                <span className="font-semibold text-slate-800">{processor.memoryType}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">Memory Speed</span>
+                <span className="font-semibold text-slate-800 font-mono">{processor.memorySpeed}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">System-Level Cache (SLC)</span>
+                <span className="font-semibold text-slate-800">{processor.systemCache || `${processor.slcMB} MB`}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">L2 Shared Cache</span>
+                <span className="font-semibold text-slate-800">{processor.l2Cache || '-'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Summary String */}
+          {processor.specs && (
+            <div className="text-[11px] text-slate-500 bg-slate-100/70 p-2.5 rounded-lg border border-slate-200">
+              <span className="font-medium text-slate-700 block mb-0.5">Specifications Summary:</span>
+              {processor.specs}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-3 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center">
+          {onFilterDevices && (
+            <button
+              onClick={() => {
+                onFilterDevices(processor.chip);
+                onClose();
+              }}
+              className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+            >
+              <span>View Devices with this Chip</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="ml-auto px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- Main Application ---
 export default function App() {
   const [rawData, setRawData] = useState<AppleSiliconBenchmark[]>([]);
+  const [processors, setProcessors] = useState<Record<string, ProcessorDetail>>({});
+  const [processorList, setProcessorList] = useState<ProcessorDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
   const [sortMetric, setSortMetric] = useState<MetricKey>('multi'); 
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState<'dashboard' | 'list'>('dashboard');
+  const [viewMode, setViewMode] = useState<'dashboard' | 'list' | 'processors'>('dashboard');
   
   const [filterMode, setFilterMode] = useState<'family' | 'tier'>('family');
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null); 
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedDetailItem, setSelectedDetailItem] = useState<ProcessedItem | null>(null);
+  const [selectedProcessorModal, setSelectedProcessorModal] = useState<ProcessorDetail | null>(null);
 
   // Table Sorting State
   const [tableSortConfig, setTableSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'scores.multi', direction: 'desc' });
@@ -600,36 +946,50 @@ export default function App() {
     setLoading(true);
     setError(null);
     try {
-      let data: AppleSiliconBenchmark[] | null = null;
-      const paths = [
-        './data.json',
-        'data.json',
-        './geekbench-data.json',
-        '/data.json',
-        './do-not-edit-json-in-this-folder/geekbench-data.json',
-        '/do-not-edit-json-in-this-folder/geekbench-data.json'
-      ];
-
-      for (const p of paths) {
-        try {
-          const res = await fetch(p);
-          if (res.ok) {
-            data = await res.json();
-            if (Array.isArray(data) && data.length > 0) break;
+      const loadJson = async (filename: string) => {
+        const base = (import.meta.env.BASE_URL || './').replace(/\/$/, '');
+        const paths = [
+          `${base}/${filename}`,
+          `./${filename}`,
+          `/${filename}`,
+          filename
+        ];
+        for (const p of paths) {
+          try {
+            const res = await fetch(p);
+            if (res.ok) {
+              const data = await res.json();
+              if (Array.isArray(data) && data.length > 0) return data;
+            }
+          } catch {
+            // try next candidate
           }
-        } catch {
-          // Fallback to next path
         }
+        return null;
+      };
+
+      const [devicesData, procData] = await Promise.all([
+        loadJson('devices.json') as Promise<AppleSiliconBenchmark[] | null>,
+        loadJson('processor.json') as Promise<ProcessorDetail[] | null>
+      ]);
+
+      if (!Array.isArray(devicesData) || devicesData.length === 0) {
+        throw new Error("Failed to load devices.json dataset");
       }
 
-      if (!Array.isArray(data) || data.length === 0) {
-        throw new Error("Failed to load /data.json or benchmark dataset");
+      if (procData && Array.isArray(procData)) {
+        const pMap: Record<string, ProcessorDetail> = {};
+        for (const p of procData) {
+          pMap[p.chip] = p;
+        }
+        setProcessors(pMap);
+        setProcessorList(procData);
       }
 
-      setRawData(data);
+      setRawData(devicesData);
     } catch (err) {
       console.error("Data load failed:", err);
-      setError("Unable to load benchmark dataset. Please ensure data.json is present in the root or public folder.");
+      setError("Unable to load benchmark dataset. Please ensure devices.json and processor.json are present.");
     } finally {
       setLoading(false);
     }
@@ -637,23 +997,110 @@ export default function App() {
 
   useEffect(() => { fetchData(); }, []);
 
+  // Normalization Join: link devices.json with processor.json dynamically
   const processedData = useMemo<ProcessedItem[]>(() => {
     if (!rawData.length) return [];
     return rawData
-      .filter(item => item.family !== "Unknown" && (item.single > 0 || item.multi > 0 || item.metal > 0 || (item.memoryBandwidth || 0) > 0))
-      .map(item => ({
-        ...item,
-        memoryBandwidth: item.memoryBandwidth || 0,
-        scores: { 
-          single: item.single || 0, 
-          multi: item.multi || 0, 
-          metal: item.metal || 0, 
-          opencl: item.opencl || 0,
-          bandwidth: item.memoryBandwidth || 0
+      .map(item => {
+        const proc = processors[item.chip];
+
+        // 1. Resolve memory bandwidth & memory details based on RAM configuration or CPU core binning
+        let memoryBandwidth = item.memoryBandwidth || 0;
+        let memoryType = item.memoryType || proc?.memoryType || 'Unified Memory';
+        let memorySpeed = item.memorySpeed || proc?.memorySpeed || '';
+        let busWidthBits = item.busWidthBits || proc?.busWidthBits;
+        let memoryBusWidth = item.memoryBusWidth || proc?.memoryBusWidth || (busWidthBits ? `${busWidthBits}-bit` : '');
+
+        if (proc?.ramConfigurations && proc.ramConfigurations.length > 0) {
+          // Match by RAM tag (e.g. "16 GB" or "24 GB / 32 GB")
+          let matched = proc.ramConfigurations.find(r => 
+            item.ram && (
+              r.ram.toLowerCase() === item.ram.toLowerCase() || 
+              (r.ram.includes('16') && item.ram.includes('16')) ||
+              (r.ram.includes('24') && item.ram.includes('24')) ||
+              (r.ram.includes('32') && item.ram.includes('32'))
+            )
+          );
+          
+          // Match by CPU core count (e.g. M3 Max 14c vs 16c, M4 Max 14c vs 16c)
+          if (!matched && item.cpuCores) {
+            matched = proc.ramConfigurations.find(r => 
+              r.ram.includes(`${item.cpuCores}-core`)
+            );
+          }
+
+          if (matched) {
+            memoryBandwidth = matched.memoryBandwidth;
+            memoryType = matched.memoryType || memoryType;
+            memorySpeed = matched.memorySpeed || memorySpeed;
+            if (matched.busWidthBits) {
+              busWidthBits = matched.busWidthBits;
+              memoryBusWidth = `${matched.busWidthBits}-bit`;
+            }
+          } else if (!memoryBandwidth && proc.memoryBandwidth) {
+            memoryBandwidth = proc.memoryBandwidth;
+          }
+        } else if (!memoryBandwidth && proc?.memoryBandwidth) {
+          memoryBandwidth = proc.memoryBandwidth;
         }
-      }))
+
+        // 2. Resolve architecture fields from processor
+        const family = item.family || proc?.family || 'Unknown';
+        const tier = item.tier || proc?.tier || 'base';
+        const processNode = item.processNode || proc?.processNode || 'TSMC Advanced';
+        const transistorTech = item.transistorTech || proc?.transistorTech;
+        const dieSizeMm2 = item.dieSizeMm2 || proc?.dieSizeMm2;
+        const packaging = item.packaging || proc?.packaging || 'Apple SiP';
+        const rayTracing = item.rayTracing !== undefined ? item.rayTracing : (proc?.rayTracing || false);
+        const neuralEngineCores = item.neuralEngineCores || proc?.neuralEngineCores || 16;
+        const aneTops = item.aneTops || proc?.aneTops;
+        const l2Cache = item.l2Cache || proc?.l2Cache;
+        const l2CacheMB = item.l2CacheMB || proc?.l2CacheMB;
+        const slcMB = item.slcMB || proc?.slcMB;
+        const systemCache = item.systemCache || proc?.systemCache || (slcMB ? `${slcMB} MB` : '');
+        const coreConfig = item.coreConfig || proc?.coreConfig || `${item.cpuCores} cores`;
+        
+        // Construct rich search specs string
+        const ramStr = item.ram ? `, ${item.ram} RAM` : '';
+        const specs = item.specs || (
+          `Apple ${item.chip} @ ${item.clock} GHz (${coreConfig} CPU cores, ${item.gpuCores} GPU cores, ${systemCache} SLC, ${memoryBusWidth} ${memoryType}${ramStr}), ${memoryBandwidth} GB/s, ${processNode}`
+        );
+
+        return {
+          ...item,
+          family,
+          tier,
+          processNode,
+          transistorTech,
+          dieSizeMm2,
+          packaging,
+          rayTracing,
+          neuralEngineCores,
+          aneTops,
+          l2Cache,
+          l2CacheMB,
+          slcMB,
+          systemCache,
+          busWidthBits,
+          memoryBusWidth,
+          memoryType,
+          memorySpeed,
+          coreConfig,
+          specs,
+          memoryBandwidth,
+          processor: proc,
+          scores: {
+            single: item.single || 0,
+            multi: item.multi || 0,
+            metal: item.metal || 0,
+            opencl: item.opencl || 0,
+            bandwidth: memoryBandwidth
+          }
+        };
+      })
+      .filter(item => item.family !== "Unknown" && (item.scores.single > 0 || item.scores.multi > 0 || item.scores.metal > 0 || item.scores.bandwidth > 0))
       .sort((a, b) => (b.scores[sortMetric] || 0) - (a.scores[sortMetric] || 0));
-  }, [rawData, sortMetric]);
+  }, [rawData, processors, sortMetric]);
 
   const filteredData = useMemo<ProcessedItem[]>(() => {
     const q = searchTerm.toLowerCase().trim();
@@ -665,7 +1112,8 @@ export default function App() {
        item.processNode?.toLowerCase().includes(q) ||
        item.device?.toLowerCase().includes(q) ||
        item.coreConfig?.toLowerCase().includes(q) ||
-       item.memoryType?.toLowerCase().includes(q))
+       item.memoryType?.toLowerCase().includes(q) ||
+       item.ram?.toLowerCase().includes(q))
     );
   }, [processedData, searchTerm]);
 
@@ -689,6 +1137,7 @@ export default function App() {
           displayName: item.chip || formatChipName(item.family, item.tier),
           family: item.family,
           tier: item.tier,
+          processor: processors[item.chip],
           [groupKey]: (item as any)[groupKey],
           gpuCores: item.gpuCores,
           scores: [], effs: [], clocks: [], ghzEffs: [], bandwidths: [], cores: new Set(), devices: new Set(),
@@ -762,7 +1211,7 @@ export default function App() {
           minGhz, maxGhz, avgGhz,
           minGhzEff: Math.round(minGhzEff), maxGhzEff: Math.round(maxGhzEff), avgGhzEff,
           minBw, maxBw, avgBw,
-          bandwidthStr: avgBw > 0 ? `${avgBw} GB/s` : '-',
+          bandwidthStr: minBw > 0 && maxBw > minBw ? `${minBw} – ${maxBw} GB/s` : (avgBw > 0 ? `${avgBw} GB/s` : '-'),
           coreCountsStr: Array.from(g.cores).sort((a,b)=>a-b).join(', ') || '-'
         };
       })
@@ -788,255 +1237,136 @@ export default function App() {
             return getAOrder(a.displayName) - getAOrder(b.displayName);
           }
           return (a.family || '').localeCompare(b.family || '');
-        } else {
+        }
+
+        const aIsM = a.family?.startsWith('M');
+        const bIsM = b.family?.startsWith('M');
+        if (aIsM && !bIsM) return -1;
+        if (!aIsM && bIsM) return 1;
+
+        if (aIsM && bIsM) {
           const famDiff = (a.family || '').localeCompare(b.family || '');
           if (famDiff !== 0) return famDiff;
-          const rankDiff = (tierRank[a.tier] ?? 5) - (tierRank[b.tier] ?? 5);
-          if (rankDiff !== 0) return rankDiff;
-          if (a.tier === 'A-Series') {
-            return getAOrder(a.displayName) - getAOrder(b.displayName);
-          }
-          return (a.gpuCores || 0) - (b.gpuCores || 0);
+          return (tierRank[a.tier] ?? 5) - (tierRank[b.tier] ?? 5);
         }
-      });
-  }, [filteredData, sortMetric, filterMode]);
 
-  const sortedTableData = useMemo<ProcessedItem[]>(() => {
-    let sortableItems = [...activeData];
-    sortableItems.sort((a, b) => {
+        return getAOrder(a.displayName) - getAOrder(b.displayName);
+      });
+  }, [filteredData, processors, sortMetric, filterMode]);
+
+  const sortedTableData = useMemo(() => {
+    return [...activeData].sort((a, b) => {
       let aVal: any = a;
       let bVal: any = b;
       
       const keys = tableSortConfig.key.split('.');
-      for (let k of keys) {
+      for (const k of keys) {
         aVal = aVal?.[k];
         bVal = bVal?.[k];
       }
 
-      if (tableSortConfig.key === 'clock') {
-        aVal = parseFloat(a.clock) || 0;
-        bVal = parseFloat(b.clock) || 0;
+      if (typeof aVal === 'string') {
+        const aNum = parseFloat(aVal);
+        const bNum = parseFloat(bVal);
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+          return tableSortConfig.direction === 'asc' ? aNum - bNum : bNum - aNum;
+        }
+        return tableSortConfig.direction === 'asc' 
+          ? aVal.localeCompare(bVal) 
+          : bVal.localeCompare(aVal);
       }
 
-      if (aVal === bVal) return 0;
-      
-      if (typeof aVal === 'string') {
-        return tableSortConfig.direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-      }
-      
+      aVal = aVal || 0;
+      bVal = bVal || 0;
       return tableSortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
     });
-    return sortableItems;
   }, [activeData, tableSortConfig]);
 
-  const familyStats = useMemo(() => new Set(processedData.map(d => d.family)).size, [processedData]);
-  
-  const handleFilterModeChange = (mode: 'family' | 'tier') => {
-    setFilterMode(mode);
-    setSelectedGroup(null);
-  };
-  const handleGroupSelect = (key: string) => setSelectedGroup(prev => prev === key ? null : key);
-  const handleDeviceSelect = (dev: string) => setSelectedDevice(prev => prev === dev ? null : dev);
+  const filteredProcessors = useMemo(() => {
+    const q = searchTerm.toLowerCase().trim();
+    return processorList.filter(p => {
+      const matchesSearch = !q || (
+        p.name.toLowerCase().includes(q) ||
+        p.chip.toLowerCase().includes(q) ||
+        p.processNode.toLowerCase().includes(q) ||
+        p.specs.toLowerCase().includes(q) ||
+        p.memoryType?.toLowerCase().includes(q) ||
+        (p.coreConfig && p.coreConfig.toLowerCase().includes(q))
+      );
+      const groupKey = filterMode === 'family' ? 'family' : 'tier';
+      const matchesGroup = !selectedGroup || (p as any)[groupKey] === selectedGroup;
+      return matchesSearch && matchesGroup;
+    });
+  }, [processorList, searchTerm, filterMode, selectedGroup]);
 
   const handleTableSort = (key: string) => {
-    let direction: 'asc' | 'desc' = 'desc';
-    if (tableSortConfig.key === key && tableSortConfig.direction === 'desc') {
-      direction = 'asc';
-    }
-    setTableSortConfig({ key, direction });
-    
-    if (key.startsWith('scores.')) {
-      setSortMetric(key.split('.')[1] as MetricKey);
-    }
+    setTableSortConfig(curr => ({
+      key,
+      direction: curr.key === key && curr.direction === 'desc' ? 'asc' : 'desc'
+    }));
   };
 
-  const SortIcon: React.FC<{ columnKey: string }> = ({ columnKey }) => {
-    if (tableSortConfig.key !== columnKey) return <ArrowUpDown className="w-3 h-3 inline ml-1 text-slate-300 opacity-50" />;
-    return tableSortConfig.direction === 'asc' 
-      ? <ChevronUp className="w-4 h-4 inline ml-0.5 text-blue-600" />
-      : <ChevronDown className="w-4 h-4 inline ml-0.5 text-blue-600" />;
+  const handleGroupSelect = (group: string) => {
+    setSelectedGroup(prev => prev === group ? null : group);
   };
 
-  const activeColorMap = filterMode === 'family' ? FAMILY_COLORS : TIER_COLORS;
-  const getGroupLabel = (key: string) => filterMode === 'tier' ? TIER_LABELS[key] || key : key;
+  const SortIcon = ({ columnKey }: { columnKey: string }) => {
+    if (tableSortConfig.key !== columnKey) return <ArrowUpDown className="w-3 h-3 text-slate-300 inline ml-1" />;
+    return tableSortConfig.direction === 'desc' 
+      ? <ChevronDown className="w-3.5 h-3.5 text-blue-600 inline ml-1 font-bold" />
+      : <ChevronUp className="w-3.5 h-3.5 text-blue-600 inline ml-1 font-bold" />;
+  };
 
-  if (loading) return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
-      <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-6"></div>
-      <h2 className="text-xl font-semibold text-slate-700 mb-2">Fetching Benchmark Data...</h2>
-      <p className="text-sm text-slate-400">Loading metrics for Mac & iOS architectures</p>
-    </div>
-  );
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+        <RefreshCw className="w-8 h-8 text-blue-500 animate-spin mb-4" />
+        <h2 className="text-slate-700 font-semibold text-sm">Loading Geekbench Matrix...</h2>
+        <p className="text-slate-400 text-xs mt-1">Reading devices.json & processor.json</p>
+      </div>
+    );
+  }
 
-  if (error) return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <Card className="max-w-md w-full p-8 text-center border-red-100">
-        <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
-          <AlertCircle className="w-8 h-8 text-red-500" />
-        </div>
-        <h2 className="text-xl font-bold text-slate-900 mb-2">Unable to Load Data</h2>
-        <p className="text-slate-600 mb-6">{error}</p>
-        <button onClick={fetchData} className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-medium transition flex items-center justify-center gap-2">
-          <RefreshCw className="w-4 h-4" /> Retry Connection
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+        <AlertCircle className="w-10 h-10 text-rose-500 mb-3" />
+        <h2 className="text-slate-800 font-bold text-base mb-1">Failed to Load Dataset</h2>
+        <p className="text-slate-500 text-xs text-center max-w-sm mb-4">{error}</p>
+        <button onClick={fetchData} className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition">
+          Retry Loading
         </button>
-      </Card>
-    </div>
-  );
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-blue-100 pb-0">
+    <div className="min-h-screen bg-slate-100/60 font-sans text-slate-800 pb-12 selection:bg-blue-500 selection:text-white">
+      {/* Top Header Bar */}
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200">
-        <div className="w-full mx-auto px-2 xl:px-8 h-14 sm:h-16 flex items-center justify-between gap-2 md:gap-4">
-          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-            <div className="bg-slate-900 text-white p-1.5 sm:p-2 rounded-lg shadow-sm">
-              <Cpu className="w-4 h-4 sm:w-5 sm:h-5" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-400 flex items-center justify-center shadow-md shadow-blue-500/20 text-white">
+              <Cpu className="w-4 h-4" />
             </div>
-            <span className="hidden md:block font-bold text-lg tracking-tight">Silicon<span className="text-slate-400 font-normal">Bench</span></span>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-sm font-bold tracking-tight text-slate-900 leading-none">SiliconBench</h1>
+                <span className="text-[10px] bg-slate-100 text-slate-600 font-semibold px-1.5 py-0.5 rounded border border-slate-200">
+                  M1–M6 & A-Series
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-0.5">Geekbench 6 Apple Silicon Performance Matrix</p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-1 justify-end min-w-0">
-            {/* Desktop Full Chipset / Mode Bar (shown when enough space: xl+) */}
-            <div className="hidden xl:flex items-center shrink-0">
-              <div className="flex bg-slate-200/60 p-1 rounded-xl items-center gap-1 mr-2">
-                <button 
-                  onClick={() => handleFilterModeChange('family')} 
-                  className={`px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all ${filterMode === 'family' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  Gen
-                </button>
-                <button 
-                  onClick={() => handleFilterModeChange('tier')} 
-                  className={`px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all ${filterMode === 'tier' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  Tier
-                </button>
-              </div>
-
-              <div className="flex items-center bg-slate-100 p-1 rounded-xl">
-                {Object.keys(activeColorMap).map(key => (
-                  <button
-                    key={key}
-                    onClick={() => handleGroupSelect(key)}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg transition-all whitespace-nowrap ${
-                      selectedGroup === key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                    } ${selectedGroup && selectedGroup !== key ? 'opacity-50' : 'opacity-100'}`}
-                  >
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: activeColorMap[key] }}></span>
-                    {getGroupLabel(key)}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Processor Filter Dropdown (shown when space is tight: <xl) */}
-            <div className="xl:hidden relative shrink-0">
-              <button
-                onClick={() => setIsFilterOpen(!isFilterOpen)}
-                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
-                  selectedGroup 
-                    ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-sm' 
-                    : 'bg-slate-100 text-slate-700 border-transparent hover:bg-slate-200'
-                }`}
-              >
-                {selectedGroup && (
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: activeColorMap[selectedGroup] }}></span>
-                )}
-                <span className="whitespace-nowrap">
-                  {selectedGroup ? getGroupLabel(selectedGroup) : (filterMode === 'family' ? 'Chipset' : 'Tier')}
-                </span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isFilterOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {isFilterOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setIsFilterOpen(false)} />
-                  <div className="absolute top-full left-0 mt-1.5 w-48 bg-white rounded-xl shadow-xl border border-slate-200 p-2 z-50">
-                    <div className="flex bg-slate-100 p-1 rounded-lg mb-2">
-                      <button 
-                        onClick={() => handleFilterModeChange('family')} 
-                        className={`flex-1 py-1 text-xs font-semibold rounded-md transition-all ${filterMode === 'family' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
-                      >
-                        Gen
-                      </button>
-                      <button 
-                        onClick={() => handleFilterModeChange('tier')} 
-                        className={`flex-1 py-1 text-xs font-semibold rounded-md transition-all ${filterMode === 'tier' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
-                      >
-                        Tier
-                      </button>
-                    </div>
-                    <div className="text-[11px] font-semibold text-slate-400 px-2 py-1">
-                      Select {filterMode === 'family' ? 'Generation' : 'Tier'}
-                    </div>
-                    <div className="space-y-0.5 max-h-56 overflow-y-auto">
-                      {Object.keys(activeColorMap).map(key => (
-                        <button
-                          key={key}
-                          onClick={() => {
-                            handleGroupSelect(key);
-                            setIsFilterOpen(false);
-                          }}
-                          className={`w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-slate-50 flex items-center justify-between transition-colors ${
-                            selectedGroup === key ? 'bg-blue-50 font-bold text-blue-700' : 'text-slate-700'
-                          }`}
-                        >
-                          <span className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: activeColorMap[key] }}></span>
-                            {getGroupLabel(key)}
-                          </span>
-                          {selectedGroup === key && <span className="text-blue-600 text-[10px]">✓</span>}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-
-            <div className="h-6 w-px bg-slate-200 shrink-0 hidden sm:block"></div>
-
-            {/* Metrics Selection Tabs */}
-            <div className="hidden md:flex bg-slate-100 p-1 rounded-xl items-center shrink-0">
-              {(Object.keys(METRIC_LABELS) as MetricKey[]).map((key) => (
-                <button
-                  key={key}
-                  onClick={() => setSortMetric(key)}
-                  className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap ${
-                    sortMetric === key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                  }`}
-                >
-                  {METRIC_LABELS[key]}
-                </button>
-              ))}
-            </div>
-            
-            {/* Mobile Metric Selector */}
-            <div className="md:hidden relative group shrink-0">
-              <button className="flex items-center gap-1.5 bg-slate-100 px-2.5 py-1.5 rounded-lg text-xs font-medium">
-                <ArrowUpDown className="w-3 h-3 text-slate-500" /> 
-                <span className="whitespace-nowrap">{METRIC_LABELS[sortMetric].split(' ')[0]}</span>
-              </button>
-              <div className="absolute top-full right-0 mt-1.5 w-40 bg-white rounded-xl shadow-xl border border-slate-200 p-1 hidden group-hover:block z-50">
-                {(Object.keys(METRIC_LABELS) as MetricKey[]).map((key) => (
-                  <button
-                    key={key}
-                    onClick={() => setSortMetric(key)}
-                    className={`w-full text-left px-3 py-1.5 text-xs rounded-lg ${
-                      sortMetric === key ? 'bg-slate-100 font-bold' : 'hover:bg-slate-50'
-                    }`}
-                  >
-                    {METRIC_LABELS[key]}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Search Input */}
-            <div className="relative shrink min-w-[70px] sm:min-w-[120px] max-w-[160px] sm:max-w-[200px] w-full">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+          {/* Search Box */}
+          <div className="flex-1 max-w-md mx-2 hidden sm:block">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input 
                 type="text" 
-                placeholder="Search specs, chip, model..." 
+                placeholder="Search chips, devices, RAM (e.g. 16GB, LPDDR6, M6)..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full bg-slate-100 focus:bg-white border border-transparent focus:border-blue-500 pl-8 pr-3 py-1.5 rounded-xl text-xs transition-all outline-none"
@@ -1048,17 +1378,27 @@ export default function App() {
              <div className="bg-slate-100 p-1 rounded-lg flex shrink-0">
                 <button 
                   onClick={() => setViewMode('dashboard')}
-                  title="Dashboard View"
-                  className={`p-1.5 rounded-md transition-all ${viewMode === 'dashboard' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+                  title="Dashboard Charts"
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${viewMode === 'dashboard' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-800'}`}
                 >
-                  <LayoutDashboard className="w-4 h-4" />
+                  <LayoutDashboard className="w-3.5 h-3.5" />
+                  <span className="hidden md:inline">Charts</span>
                 </button>
                 <button 
                   onClick={() => setViewMode('list')}
-                  title="Table View"
-                  className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+                  title="Devices Table (devices.json)"
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-800'}`}
                 >
-                  <Database className="w-4 h-4" />
+                  <Database className="w-3.5 h-3.5" />
+                  <span className="hidden md:inline">Devices ({activeData.length})</span>
+                </button>
+                <button 
+                  onClick={() => setViewMode('processors')}
+                  title="Processor Matrix (processor.json)"
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${viewMode === 'processors' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-800'}`}
+                >
+                  <Cpu className="w-3.5 h-3.5" />
+                  <span className="hidden md:inline">Processors ({processorList.length})</span>
                 </button>
              </div>
           </div>
@@ -1066,27 +1406,25 @@ export default function App() {
       </div>
 
       <main className="w-full px-2 xl:px-8 py-3 pb-8 space-y-3">
+        {/* Metric Quick Stats */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
           <Card>
-            <StatItem label="Models" value={activeData.length} icon={Monitor} colorClass="bg-blue-500" />
-          </Card>
-          <Card>
             <StatItem 
-              label={`Top ${METRIC_LABELS[sortMetric].split(' ')[0]}`}
-              value={activeData.length > 0 ? (sortMetric === 'bandwidth' ? `${activeData[0].scores[sortMetric]} GB/s` : activeData[0].scores[sortMetric].toLocaleString()) : '-'}
+              label={`Top ${METRIC_LABELS[sortMetric]}`} 
+              value={activeData.length > 0 ? (sortMetric === 'bandwidth' ? `${activeData[0].scores[sortMetric]} GB/s` : activeData[0].scores[sortMetric].toLocaleString()) : '-'} 
               subtext={activeData.length > 0 ? activeData[0].model : ''}
               icon={Activity} 
-              colorClass="bg-emerald-500" 
+              colorClass="bg-blue-500" 
             />
           </Card>
           <Card>
             <StatItem 
               label={sortMetric === 'bandwidth' ? "Avg Bandwidth" : "Avg Efficiency"} 
-              value={activeData.length > 0 ? (
+              value={
                 sortMetric === 'bandwidth' 
                   ? `${Math.round(activeData.reduce((acc, curr) => acc + (curr.scores.bandwidth || 0), 0) / (activeData.filter(d => (d.scores.bandwidth || 0) > 0).length || 1))} GB/s`
-                  : Math.round(activeData.reduce((acc, curr) => acc + (curr.scores[sortMetric] / (sortMetric === 'single' ? 1 : sortMetric === 'multi' ? curr.cpuCores : curr.gpuCores || 1)), 0) / (activeData.filter(d => d.scores[sortMetric] > 0).length || 1)).toLocaleString()
-              ) : '-'}
+                  : `${Math.round(activeData.reduce((acc, curr) => acc + (curr.scores[sortMetric] || 0) / (curr.cpuCores || 1), 0) / (activeData.length || 1))} pts/core`
+              } 
               subtext={sortMetric === 'bandwidth' ? "Bandwidth (GB/s)" : "Score / Core"}
               icon={Zap} 
               colorClass="bg-amber-500" 
@@ -1094,15 +1432,25 @@ export default function App() {
           </Card>
           <Card>
             <StatItem 
-              label="Generations" 
-              value={`${familyStats}`} 
-              subtext="M1 – M6 & A-Series"
+              label="Tested Devices" 
+              value={activeData.length} 
+              subtext="Mac, iPad & iPhone models"
+              icon={Monitor} 
+              colorClass="bg-emerald-500" 
+            />
+          </Card>
+          <Card>
+            <StatItem 
+              label="Apple Silicon Generations" 
+              value={`${processorList.length} Processors`}
+              subtext="M1 – M6 & A-Series (processor.json)"
               icon={Layers} 
               colorClass="bg-purple-500" 
             />
           </Card>
         </div>
 
+        {/* View Mode Router */}
         {viewMode === 'dashboard' ? (
           <div className="space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
@@ -1148,35 +1496,46 @@ export default function App() {
                 subtitle={`Range & Avg ${sortMetric === 'bandwidth' ? 'Multi-Core' : METRIC_LABELS[sortMetric]} Score Per Core`}
                 badgeText="Score / Core" badgeClass="bg-amber-50 text-amber-600"
                 data={aggregatedData} dataKey="maxEff" valueFormat={(v) => v.toLocaleString()}
-                tooltipRanges={(d) => ({ 
-                  range: `${d.minEff.toLocaleString()} - ${d.maxEff.toLocaleString()}`, 
-                  avg: d.avgEff.toLocaleString() 
-                })}
+                tooltipRanges={(d) => ({ range: `${d.minEff} - ${d.maxEff}`, avg: d.avgEff.toLocaleString() })}
                 onGroupSelect={handleGroupSelect} selectedGroup={selectedGroup} selectedDevice={selectedDevice} filterMode={filterMode}
               />
               <MetricBarChart
-                title="Clock Speed" subtitle={`Range & Avg GHz by ${filterMode === 'tier' ? 'Tier' : 'Chipset'}`}
-                badgeText="GHz" badgeClass="bg-emerald-50 text-emerald-600"
-                data={aggregatedData} dataKey="maxGhz" valueFormat={(v) => v.toFixed(2)}
-                tooltipRanges={(d) => ({ range: `${d.minGhz.toFixed(2)} - ${d.maxGhz.toFixed(2)}`, avg: d.avgGhz.toFixed(2) })}
+                title="Clock Frequencies" subtitle="Peak Boost Clock per Architecture (GHz)"
+                badgeText="GHz" badgeClass="bg-purple-50 text-purple-600"
+                data={aggregatedData} dataKey="maxGhz" valueFormat={(v) => `${v.toFixed(2)} GHz`}
+                tooltipRanges={(d) => ({ range: `${d.minGhz.toFixed(2)} - ${d.maxGhz.toFixed(2)} GHz`, avg: `${d.avgGhz.toFixed(2)} GHz` })}
                 onGroupSelect={handleGroupSelect} selectedGroup={selectedGroup} selectedDevice={selectedDevice} filterMode={filterMode}
               />
               <MetricBarChart
-                title="GHz Efficiency" subtitle={`Range & Avg ${METRIC_LABELS[sortMetric]} Score Per GHz`}
-                badgeText="Score / GHz" badgeClass="bg-purple-50 text-purple-600"
+                title="IPC / Frequency Efficiency" subtitle="Performance Normalized per GHz"
+                badgeText="Score / GHz" badgeClass="bg-emerald-50 text-emerald-600"
                 data={aggregatedData} dataKey="maxGhzEff" valueFormat={(v) => v.toLocaleString()}
                 tooltipRanges={(d) => ({ range: `${d.minGhzEff.toLocaleString()} - ${d.maxGhzEff.toLocaleString()}`, avg: d.avgGhzEff.toLocaleString() })}
                 onGroupSelect={handleGroupSelect} selectedGroup={selectedGroup} selectedDevice={selectedDevice} filterMode={filterMode}
               />
             </div>
 
-            <div className="flex justify-center mt-2 mb-0">
-              <div className="flex flex-wrap gap-2.5 sm:gap-3 items-center justify-center bg-white px-4 sm:px-5 py-2 rounded-full border border-slate-200 shadow-sm">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest mr-1">Models</span>
+            {/* Quick Filters Footer */}
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-slate-500">Highlight:</span>
+                {(['family', 'tier'] as const).map(mode => (
+                  <button
+                    key={mode}
+                    onClick={() => setFilterMode(mode)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${filterMode === mode ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                  >
+                    {mode === 'family' ? 'Family (M1-M6)' : 'Tiers (Base, Pro, Max)'}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold text-slate-500">Devices:</span>
                 {DEVICES.map(device => (
-                  <button 
+                  <button
                     key={device}
-                    onClick={() => handleDeviceSelect(device)}
+                    onClick={() => setSelectedDevice(prev => prev === device ? null : device)}
                     className={`flex items-center gap-1.5 text-[11px] font-medium transition-opacity ${selectedDevice && selectedDevice !== device ? 'opacity-40' : 'opacity-100'}`}
                   >
                     <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: DEVICE_COLORS[device] }}></span>
@@ -1186,8 +1545,21 @@ export default function App() {
               </div>
             </div>
           </div>
-        ) : (
+        ) : viewMode === 'list' ? (
+          /* Devices Table View (devices.json) */
           <Card className="overflow-hidden">
+            <div className="p-3 border-b border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Database className="w-4 h-4 text-blue-600" />
+                <h3 className="text-xs font-bold text-slate-900">Apple Silicon Device Benchmarks (devices.json)</h3>
+                <span className="text-[10px] text-slate-500 bg-slate-200/70 px-2 py-0.5 rounded-full font-medium">
+                  {sortedTableData.length} configurations
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-500">
+                Linked dynamically to processor.json with zero redundant architectural storage
+              </div>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm text-slate-600">
                 <thead className="bg-slate-50 text-slate-900 font-semibold border-b border-slate-200 whitespace-nowrap select-none">
@@ -1230,14 +1602,24 @@ export default function App() {
                     <tr 
                       key={item.id || idx} 
                       onClick={() => setSelectedDetailItem(item)}
-                      title="Click to view detailed architecture specs"
+                      title="Click to view detailed architecture specs & die shots"
                       className="hover:bg-blue-50/40 transition-colors group cursor-pointer"
                     >
                       <td className="px-4 py-2 pl-6 font-medium text-slate-900 whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
                           <span>{item.model}</span>
+                          {item.ram && (
+                            <span className="text-[10px] px-1.5 py-0.2 bg-purple-50 text-purple-700 border border-purple-200 rounded font-mono font-medium">
+                              {item.ram}
+                            </span>
+                          )}
                           {item.rayTracing && (
                             <span className="text-[9px] px-1 py-0.2 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded font-medium">RT</span>
+                          )}
+                          {item.processor?.dieShots && item.processor.dieShots.length > 0 && (
+                            <span className="text-[9px] px-1 py-0.2 bg-sky-50 text-sky-600 border border-sky-100 rounded font-medium flex items-center gap-0.5" title="Die shot available">
+                              <Image className="w-2.5 h-2.5" /> Die
+                            </span>
                           )}
                         </div>
                       </td>
@@ -1282,13 +1664,170 @@ export default function App() {
               </table>
             </div>
           </Card>
+        ) : (
+          /* Processors Architecture Matrix View (processor.json) */
+          <Card className="overflow-hidden">
+            <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Cpu className="w-4 h-4 text-blue-600" />
+                  Apple Silicon Processor Architecture Matrix (processor.json)
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Authoritative silicon specifications: TSMC fabrication processes, GAA transistor tech, die floorplans, caches, and linked 4K die shots ({filteredProcessors.length} processors)
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 font-medium">Click chip to inspect full silicon specs & die shots</span>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-600">
+                <thead className="bg-slate-50 text-slate-900 font-semibold border-b border-slate-200 whitespace-nowrap select-none">
+                  <tr>
+                    <th className="px-4 py-3 pl-6">Processor</th>
+                    <th className="px-4 py-3">Process Node & Tech</th>
+                    <th className="px-4 py-3">Die Area</th>
+                    <th className="px-4 py-3">CPU Cores & Split</th>
+                    <th className="px-4 py-3">Peak Clock</th>
+                    <th className="px-4 py-3">GPU Cores</th>
+                    <th className="px-4 py-3">Neural Engine</th>
+                    <th className="px-4 py-3 text-right">Memory Bandwidth</th>
+                    <th className="px-4 py-3">Memory Speed & Tech</th>
+                    <th className="px-4 py-3">Cache (SLC / L2)</th>
+                    <th className="px-4 py-3 pr-6 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredProcessors.map((p) => {
+                    const isM6 = p.chip === 'M6';
+                    return (
+                      <tr 
+                        key={p.chip}
+                        onClick={() => setSelectedProcessorModal(p)}
+                        className={`hover:bg-blue-50/40 transition-colors group cursor-pointer ${isM6 ? 'bg-sky-50/30' : ''}`}
+                      >
+                        <td className="px-4 py-3 pl-6 font-medium text-slate-900 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <span 
+                              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-medium text-white shadow-sm"
+                              style={{ backgroundColor: FAMILY_COLORS[p.family] || TIER_COLORS[p.tier] || '#64748b' }}
+                            >
+                              {p.chip}
+                            </span>
+                            <span className="font-bold text-slate-900">{p.name}</span>
+                            {p.rayTracing && (
+                              <span className="text-[9px] px-1 py-0.2 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded font-medium">RT</span>
+                            )}
+                            {p.dieShots && p.dieShots.length > 0 && (
+                              <span className="text-[9px] px-1.5 py-0.2 bg-purple-50 text-purple-700 border border-purple-200 rounded font-medium flex items-center gap-0.5" title="4K Die shot available">
+                                <Image className="w-2.5 h-2.5" /> Die Shot
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="font-medium text-slate-800">{p.processNode}</div>
+                          {p.transistorTech && (
+                            <div className="text-[10px] text-slate-400 font-mono">{p.transistorTech}</div>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-3 whitespace-nowrap font-mono text-[11px] text-slate-700">
+                          {p.dieSizeMm2 ? `${p.dieSizeMm2} mm²` : '-'}
+                        </td>
+
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className="font-semibold text-slate-800">{p.coreConfig || `${p.cpuCores} cores`}</span>
+                        </td>
+
+                        <td className="px-4 py-3 whitespace-nowrap font-mono text-[11px] text-slate-700">
+                          {p.clock} GHz
+                        </td>
+
+                        <td className="px-4 py-3 whitespace-nowrap font-mono text-[11px] text-slate-700">
+                          {Array.isArray(p.gpuCores) ? p.gpuCores.join(' / ') : p.gpuCores} cores
+                        </td>
+
+                        <td className="px-4 py-3 whitespace-nowrap text-[11px]">
+                          <span className="font-semibold text-slate-800">{p.neuralEngineCores}-core</span>
+                          {p.aneTops && <span className="text-slate-400 ml-1">({p.aneTops} TOPS)</span>}
+                        </td>
+
+                        <td className="px-4 py-3 whitespace-nowrap text-right font-mono text-[11px]">
+                          {p.ramConfigurations && p.ramConfigurations.length > 0 ? (
+                            <div className="space-y-0.5">
+                              {p.ramConfigurations.map((rc, idx) => (
+                                <div key={idx} className="flex items-center justify-end gap-1.5">
+                                  <span className="text-[9.5px] text-slate-500 font-medium">{rc.ram}:</span>
+                                  <span className="font-bold text-purple-700 bg-purple-50 px-1.5 py-0.2 rounded">
+                                    {rc.memoryBandwidth} GB/s
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded">
+                              {p.memoryBandwidthMin ? `${p.memoryBandwidthMin} – ${p.memoryBandwidthMax} GB/s` : `${p.memoryBandwidth} GB/s`}
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-3 whitespace-nowrap text-[11px]">
+                          <div className="font-medium text-slate-800">{p.memoryType}</div>
+                          <div className="text-[10px] text-slate-400 font-mono">{p.memorySpeed} · {p.memoryBusWidth}</div>
+                        </td>
+
+                        <td className="px-4 py-3 whitespace-nowrap text-[11px] text-slate-700">
+                          <div>SLC: <span className="font-semibold">{p.systemCache || `${p.slcMB} MB`}</span></div>
+                          {p.l2Cache && <div className="text-[10px] text-slate-400 font-mono">L2: {p.l2Cache}</div>}
+                        </td>
+
+                        <td className="px-4 py-3 pr-6 text-center whitespace-nowrap">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedProcessorModal(p);
+                            }}
+                            className="px-2.5 py-1 text-[11px] font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition"
+                          >
+                            Details
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {filteredProcessors.length === 0 && (
+                    <tr>
+                      <td colSpan={11} className="p-12 text-center text-slate-400">
+                        No processors match "{searchTerm}"
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
         )}
       </main>
 
-      {/* Architecture Detail Modal */}
+      {/* Device Architecture Detail Modal */}
       <DeviceDetailModal 
         item={selectedDetailItem} 
+        processor={selectedDetailItem?.chip ? processors[selectedDetailItem.chip] : undefined}
         onClose={() => setSelectedDetailItem(null)} 
+      />
+
+      {/* Processor Specs Detail Modal */}
+      <ProcessorDetailModal
+        processor={selectedProcessorModal}
+        onClose={() => setSelectedProcessorModal(null)}
+        onFilterDevices={(chip) => {
+          setSearchTerm(chip);
+          setViewMode('list');
+        }}
       />
     </div>
   );

@@ -57,70 +57,83 @@ To ensure fast load times, zero bloat, and seamless GitHub Pages hosting, this p
 | `tailwindcss` | `^3.4.17` | Utility-first CSS |
 | `postcss` / `autoprefixer` | `^8` / `^10` | CSS processing |
 
-Total production bundle is a pure static site (`dist/index.html`, `dist/assets/`, `dist/data.json`) that can be served directly from GitHub Pages or any CDN.
+Total production bundle is a pure static site (`dist/index.html`, `dist/assets/`, `dist/devices.json`, `dist/processor.json`, `dist/images/`) that can be served directly from GitHub Pages or any CDN.
 
 ---
 
-## 🗄️ Redesigned `data.json` Schema
+## 🗄️ Normalized Data Architecture: Single Source of Truth
 
-The benchmark dataset has been completely redesigned to include comprehensive hardware specifications while preserving 100% backward compatibility with all existing fields.
+To eliminate data redundancy and keep storage minimal, all data is organized into a clean relational structure stored in `public/`:
+1. **`public/devices.json`** (~35 KB): Device benchmark facts (model, year, chip foreign key, CPU/GPU binning, clock, Geekbench 6 scores). Zero duplicated architectural specs.
+2. **`public/processor.json`** (~25 KB): Authoritative silicon microarchitecture, fabrication processes, transistor technologies, cache hierarchies, RAM bandwidth scaling, and silicon die shots for each Apple Silicon SoC.
 
-### TypeScript Interface Definition (`src/types.ts`)
+> [!NOTE]
+> **Why `public/` and not `.gitignore`?**
+> In Vite, `dist/` is the generated build output (which is git-ignored), whereas `public/` contains tracked source static assets (datasets, die shot images, and `CNAME`). By keeping the canonical datasets exclusively in `public/devices.json` and `public/processor.json`, we avoid duplicating files between the repository root and `public/`.
+
+### 1. Normalized Device Benchmark Schema (`public/devices.json`)
 
 ```typescript
 export interface AppleSiliconBenchmark {
-  // --- Device Identification ---
-  id?: string;                    // Unique readable slug (e.g., "mac-mini-2024-m4-pro-14c-20g")
+  id: string;                     // Unique readable slug (e.g., "macbook-pro-14-inch-2026-m6-16gb-12c-12g")
   model: string;                  // Apple device model name
-  device: string;                 // Category ("MacBook Pro", "iPad", "iPhone", etc.)
+  device: string;                 // Category ("MacBook Pro", "Mac mini", "iPad", "iPhone", etc.)
   year: number;                   // Release year (2020 - 2026)
-
-  // --- Silicon Architecture ---
-  family: "M1" | "M2" | "M3" | "M4" | "M5" | "M6" | string;
-  tier: "base" | "pro" | "max" | "ultra" | "A-Series" | string;
-  chip: string;                   // Marketing name (e.g., "M4 Pro", "A18 Pro")
-  processNode?: string;           // Fabrication process (e.g., "3nm (TSMC N3E)")
-  packaging?: string;             // Interconnect (e.g., "Apple SiP", "UltraFusion", "InFO-PoP")
-
-  // --- CPU Architecture ---
-  cpuCores: number;               // Total CPU cores (e.g., 14)
-  pCores?: number;                // Performance cores (e.g., 10)
-  eCores?: number;                // Efficiency cores (e.g., 4)
-  coreConfig?: string;            // Configuration string (e.g., "10P + 4E")
-  clock: string;                  // Peak frequency in GHz (e.g., "4.5")
-
-  // --- GPU & Accelerators ---
-  gpuCores: number;               // Total GPU cores (e.g., 20)
-  rayTracing?: boolean;           // Hardware Ray Tracing support (M3/A17 Pro+)
-  neuralEngineCores?: number;     // Neural Engine cores (e.g., 16 or 32)
-  aneTops?: number;               // Apple Neural Engine TOPS (e.g., 38.0)
-
-  // --- Memory Subsystem ---
-  memoryBandwidth: number;        // Memory bandwidth in GB/s (e.g., 273.0)
-  memoryType?: string;            // Type (e.g., "LPDDR5X-8533")
-  memorySpeed?: string;           // Speed (e.g., "8533 MT/s")
-  busWidthBits?: number;          // Bus width in bits (e.g., 256)
-  memoryBusWidth?: string;        // Bus width label (e.g., "256-bit")
-  slcMB?: number;                 // System Level Cache in MB (e.g., 32)
-  systemCache?: string;           // Cache label (e.g., "32 MB")
+  chip: string;                   // Foreign key linking to processor.json (e.g., "M6", "M4 Max", "A20")
+  ram?: string;                   // Installed unified memory when relevant to bandwidth (e.g., "16 GB", "24 GB / 32 GB")
+  cpuCores: number;               // Device-specific active CPU core count
+  gpuCores: number;               // Device-specific active GPU core count
+  clock: string;                  // Frequency in GHz (e.g., "4.8")
 
   // --- Geekbench 6 Scores ---
   single: number;                 // Single-core CPU score
   multi: number;                  // Multi-core CPU score
   metal: number;                  // Metal GPU compute score
   opencl: number;                 // OpenCL GPU compute score
-
-  // --- Compatibility & Search ---
-  specs: string;                  // Comprehensive description for full-text search
 }
 ```
 
+### 2. Processor Architecture Schema (`public/processor.json`)
+
+```typescript
+export interface ProcessorDetail {
+  chip: string;                   // Primary key ("M6", "M5", "A20", etc.)
+  name: string;                   // Full name ("Apple M6")
+  family: Family;
+  tier: Tier;
+  processNode: string;            // TSMC fabrication node ("2nm (TSMC N2)")
+  transistorTech?: string;        // "GAA Nanosheet" / "FinFET"
+  dieSizeMm2?: number;            // Physical die area (e.g., 141.6 mm² for M6)
+  packaging: string;              // "Apple SiP", "UltraFusion", "InFO-PoP"
+  cpuCores: number | number[];    // Architectural core count(s)
+  coreConfig?: string;            // e.g. "2 Super + 4P + 6E"
+  gpuCores: number | number[];    // Architectural GPU core configs
+  rayTracing?: boolean;
+  neuralEngineCores?: number;     // e.g. 32 cores
+  aneTops?: number;               // e.g. 55.0 TOPS
+  l2Cache?: string;               // e.g. 20 MB for M6
+  systemCache?: string;           // e.g. 16 MB SLC for M6
+  busWidthBits?: number;          // e.g. 128-bit
+  memoryType?: string;            // e.g. "LPDDR5X / LPDDR6"
+  memorySpeed?: string;           // e.g. "9600 - 10667 MT/s"
+  memoryBandwidth: number;        // Peak bandwidth in GB/s
+  ramConfigurations?: RAMConfiguration[]; // RAM-specific speeds:
+                                  // • 16 GB: 153.6 GB/s (9,600 MT/s DRAM)
+                                  // • 24 & 32 GB: 170.7 GB/s (10,667 MT/s DRAM)
+  dieShots?: DieShot[];           // Local die shot image paths & original high-res references
+  specs: string;
+}
+```
+
+### Dynamic In-Memory Relational Join
+The frontend dynamically joins `public/devices.json` with `public/processor.json` on the fly using the `chip` key. Architectural fields, die shots, and RAM-dependent memory bandwidths are resolved automatically at runtime without storing any repeated data in `devices.json`.
+
 ### Auto-Enrichment Script
-To update or enrich new benchmark runs in `data.json`:
+To enrich and synchronize `public/devices.json` and `public/processor.json`:
 ```bash
 python3 scripts/enrich_data.py
 ```
-This script computes P/E splits, memory types, bus widths, cache sizes, ray tracing flags, and TOPS ratings automatically.
+This script computes P/E splits, RAM-dependent bandwidths, DRAM speeds, caches, ray tracing flags, and TOPS ratings automatically.
 
 ---
 
