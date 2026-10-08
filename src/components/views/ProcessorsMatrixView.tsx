@@ -23,6 +23,7 @@ import { ProcessorDetail, ProcessedItem, FilterMode } from '../../types';
 import { FAMILY_COLORS, TIER_COLORS, TIER_LABELS, formatReleaseDate } from '../../constants';
 import { ProcessorCard, ProcessorBenchmarkStats } from '../silicon/ProcessorCard';
 import { DieFloorplanVisual } from '../silicon/DieFloorplanVisual';
+import { ChipIconSvg } from '../silicon/ChipIconSvg';
 import { DieShotGallery } from '../gallery/DieShotGallery';
 
 export interface ProcessorsMatrixViewProps {
@@ -312,24 +313,29 @@ export const ProcessorsMatrixView: React.FC<ProcessorsMatrixViewProps> = ({
                 onClick={() => onSelectProcessor(processor)}
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span 
-                      className="px-2.5 py-0.5 rounded-full text-xs font-bold text-white shadow-xs"
-                      style={{ backgroundColor: familyColor }}
-                    >
-                      {processor.chip}
-                    </span>
-                    <span className="font-bold text-slate-900 text-sm group-hover:text-blue-600 transition">
-                      {processor.name}
-                    </span>
-                    {processor.releaseDate && (
-                      <span className="text-[10px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded flex items-center gap-1 font-medium">
-                        <Calendar className="w-2.5 h-2.5 text-slate-400" />
-                        {formatReleaseDate(processor.releaseDate)}
-                      </span>
-                    )}
+                  <div className="flex items-center gap-2.5">
+                    <ChipIconSvg chip={processor.chip} size={34} className="shrink-0 rounded-lg shadow-xs" />
+                    <div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span 
+                          className="px-2 py-0.5 rounded-full text-[10px] font-bold text-white shadow-xs"
+                          style={{ backgroundColor: familyColor }}
+                        >
+                          {processor.chip}
+                        </span>
+                        <span className="font-bold text-slate-900 text-sm group-hover:text-blue-600 transition">
+                          {processor.name}
+                        </span>
+                      </div>
+                      {processor.releaseDate && (
+                        <div className="text-[10px] font-mono text-slate-400 flex items-center gap-1 mt-0.5">
+                          <Calendar className="w-2.5 h-2.5 text-slate-400" />
+                          {formatReleaseDate(processor.releaseDate)}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right shrink-0">
                     <span className="font-mono text-xs font-semibold text-slate-600">
                       {processor.dieSizeMm2 ? `${processor.dieSizeMm2} mm²` : processor.processNode}
                     </span>
@@ -391,22 +397,25 @@ export const ProcessorsMatrixView: React.FC<ProcessorsMatrixViewProps> = ({
                       className={`hover:bg-blue-50/40 transition-colors group cursor-pointer ${isM6 ? 'bg-sky-50/30' : ''}`}
                     >
                       <td className="px-4 py-3 pl-6 font-medium text-slate-900 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <span 
-                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-medium text-white shadow-sm"
-                            style={{ backgroundColor: FAMILY_COLORS[p.family] || TIER_COLORS[p.tier] || '#64748b' }}
-                          >
-                            {p.chip}
-                          </span>
-                          <span className="font-bold text-slate-900">{p.name}</span>
-                          {p.rayTracing && (
-                            <span className="text-[9px] px-1 py-0.2 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded font-medium">RT</span>
-                          )}
-                          {p.dieShots && p.dieShots.length > 0 && (
-                            <span className="text-[9px] px-1.5 py-0.2 bg-purple-50 text-purple-700 border border-purple-200 rounded font-medium flex items-center gap-0.5" title="4K Die shot available">
-                              <ImageIcon className="w-2.5 h-2.5" /> 4K Die Shot
+                        <div className="flex items-center gap-2.5">
+                          <ChipIconSvg chip={p.chip} size={28} className="shrink-0 rounded-md shadow-xs" />
+                          <div className="flex items-center gap-1.5">
+                            <span 
+                              className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium text-white shadow-sm"
+                              style={{ backgroundColor: FAMILY_COLORS[p.family] || TIER_COLORS[p.tier] || '#64748b' }}
+                            >
+                              {p.chip}
                             </span>
-                          )}
+                            <span className="font-bold text-slate-900">{p.name}</span>
+                            {p.rayTracing && (
+                              <span className="text-[9px] px-1 py-0.2 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded font-medium">RT</span>
+                            )}
+                            {p.dieShots && p.dieShots.length > 0 && (
+                              <span className="text-[9px] px-1.5 py-0.2 bg-purple-50 text-purple-700 border border-purple-200 rounded font-medium flex items-center gap-0.5" title="4K Die shot available">
+                                <ImageIcon className="w-2.5 h-2.5" /> 4K Die Shot
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </td>
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { X, Zap, ExternalLink, Calendar } from 'lucide-react';
 import { ProcessorDetail } from '../../types';
 import { DieShotGallery } from '../gallery/DieShotGallery';
+import { ChipIconSvg } from '../silicon/ChipIconSvg';
 import { formatReleaseDate } from '../../constants';
 
 export interface ProcessorDetailModalProps {
@@ -21,28 +22,31 @@ export const ProcessorDetailModal: React.FC<ProcessorDetailModalProps> = ({ proc
       >
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-100 flex items-start justify-between bg-slate-50/50">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
-                {processor.chip}
-              </span>
-              <span className="text-xs font-medium text-slate-400">
-                {processor.family} · {processor.tier} tier
-              </span>
-              {processor.releaseDate && (
-                <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 flex items-center gap-1">
-                  <Calendar className="w-2.5 h-2.5 text-slate-400" />
-                  {formatReleaseDate(processor.releaseDate)}
+          <div className="flex items-center gap-3">
+            <ChipIconSvg chip={processor.chip} size={48} className="rounded-xl shadow-md shrink-0" />
+            <div>
+              <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                  {processor.chip}
                 </span>
-              )}
-              {processor.rayTracing && (
-                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  Hardware RT
+                <span className="text-xs font-medium text-slate-400">
+                  {processor.family} · {processor.tier} tier
                 </span>
-              )}
+                {processor.releaseDate && (
+                  <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 flex items-center gap-1">
+                    <Calendar className="w-2.5 h-2.5 text-slate-400" />
+                    {formatReleaseDate(processor.releaseDate)}
+                  </span>
+                )}
+                {processor.rayTracing && (
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    Hardware RT
+                  </span>
+                )}
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 leading-tight">{processor.name}</h3>
+              <p className="text-xs text-slate-500 mt-0.5">{processor.processNode} {processor.transistorTech ? `· ${processor.transistorTech}` : ''}</p>
             </div>
-            <h3 className="text-lg font-bold text-slate-900">{processor.name}</h3>
-            <p className="text-xs text-slate-500">{processor.processNode} {processor.transistorTech ? `· ${processor.transistorTech}` : ''}</p>
           </div>
           <button 
             onClick={onClose}

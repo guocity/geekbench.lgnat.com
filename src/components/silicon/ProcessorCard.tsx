@@ -1,6 +1,7 @@
 import React from 'react';
 import { ProcessorDetail, ProcessedItem } from '../../types';
 import { SiliconChipVisual } from './SiliconChipVisual';
+import { ChipIconSvg } from './ChipIconSvg';
 import { FAMILY_COLORS, TIER_COLORS, TIER_LABELS, formatReleaseDate } from '../../constants';
 import { 
   Zap, 
@@ -67,39 +68,44 @@ export const ProcessorCard: React.FC<ProcessorCardProps> = ({
     >
       {/* Top Header Card */}
       <div className="p-4 sm:p-5 pb-3">
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <div>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span 
-                className="px-2 py-0.5 rounded-full text-[10px] font-bold text-white shadow-sm flex items-center gap-1"
-                style={{ backgroundColor: familyColor }}
-              >
-                {processor.chip}
-              </span>
-              <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                {processor.family} · {tierFormatted}
-              </span>
-              {processor.releaseDate && (
-                <span className="text-[10px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full flex items-center gap-1 font-medium">
-                  <Calendar className="w-2.5 h-2.5 text-slate-400" />
-                  {formatReleaseDate(processor.releaseDate)}
-                </span>
-              )}
-              {processor.rayTracing && (
-                <span className="text-[9.5px] font-bold px-1.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-md flex items-center gap-0.5">
-                  <Flame className="w-2.5 h-2.5 text-amber-600" />
-                  Ray Tracing
-                </span>
-              )}
+        <div className="flex items-start justify-between gap-3 mb-2">
+          <div className="flex items-start gap-2.5">
+            <div className="shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
+              <ChipIconSvg chip={processor.chip} size={40} className="shadow-sm rounded-xl" />
             </div>
-            <h3 className="text-base sm:text-lg font-bold text-slate-900 mt-1 tracking-tight flex items-center gap-1.5">
-              {processor.name}
-              {isM6 && (
-                <span className="text-[10px] bg-gradient-to-r from-sky-500 to-blue-600 text-white font-extrabold px-1.5 py-0.5 rounded-md shadow-sm">
-                  NEXT-GEN 2NM
+            <div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span 
+                  className="px-2 py-0.5 rounded-full text-[10px] font-bold text-white shadow-sm flex items-center gap-1"
+                  style={{ backgroundColor: familyColor }}
+                >
+                  {processor.chip}
                 </span>
-              )}
-            </h3>
+                <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                  {processor.family} · {tierFormatted}
+                </span>
+                {processor.releaseDate && (
+                  <span className="text-[10px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full flex items-center gap-1 font-medium">
+                    <Calendar className="w-2.5 h-2.5 text-slate-400" />
+                    {formatReleaseDate(processor.releaseDate)}
+                  </span>
+                )}
+                {processor.rayTracing && (
+                  <span className="text-[9.5px] font-bold px-1.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-md flex items-center gap-0.5">
+                    <Flame className="w-2.5 h-2.5 text-amber-600" />
+                    Ray Tracing
+                  </span>
+                )}
+              </div>
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 mt-1 tracking-tight flex items-center gap-1.5">
+                {processor.name}
+                {isM6 && (
+                  <span className="text-[10px] bg-gradient-to-r from-sky-500 to-blue-600 text-white font-extrabold px-1.5 py-0.5 rounded-md shadow-sm">
+                    NEXT-GEN 2NM
+                  </span>
+                )}
+              </h3>
+            </div>
           </div>
 
           <div className="text-right shrink-0">
