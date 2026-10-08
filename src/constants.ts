@@ -59,3 +59,17 @@ export const formatChipName = (family: string, tierStr: string, chip?: string): 
 export const getChipsetTag = (item: AppleSiliconBenchmark | ProcessedItem): string => {
   return item.chip || formatChipName(item.family || '', item.tier || '');
 };
+
+export const formatReleaseDate = (dateStr?: string): string => {
+  if (!dateStr) return '-';
+  const parts = dateStr.split('-');
+  if (parts.length >= 2) {
+    const year = parts[0];
+    const monthNum = parseInt(parts[1], 10);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = months[monthNum - 1] || parts[1];
+    return `${month} ${year}`;
+  }
+  return dateStr;
+};
+

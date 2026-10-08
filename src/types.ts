@@ -59,6 +59,7 @@ export interface ProcessorDetail {
   memoryBandwidthMax?: number;
   ramConfigurations?: RAMConfiguration[];
   dieShots?: DieShot[];
+  releaseDate?: string;
   specs: string;
 }
 
@@ -102,6 +103,7 @@ export interface AppleSiliconBenchmark {
   slcMB?: number;
   systemCache?: string;
   ramConfigurations?: RAMConfiguration[];
+  releaseDate?: string;
 
   // Processed runtime scores
   scores?: BenchmarkScores;

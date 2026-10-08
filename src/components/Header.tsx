@@ -200,27 +200,42 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* View Mode Toggle */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          <div className="bg-slate-100 p-1 rounded-lg flex shrink-0">
+          <div className="bg-slate-100 p-1 rounded-xl flex items-center shrink-0">
             <button 
               onClick={() => onViewModeChange('dashboard')}
               title="Dashboard View"
-              className={`p-1.5 rounded-md transition-all ${viewMode === 'dashboard' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+              className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg transition-all text-xs font-semibold ${
+                viewMode === 'dashboard' 
+                  ? 'bg-white shadow-sm text-blue-600' 
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
             >
-              <LayoutDashboard className="w-4 h-4" />
+              <LayoutDashboard className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline">Dashboard</span>
             </button>
             <button 
               onClick={() => onViewModeChange('list')}
-              title="Table View"
-              className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+              title="Devices Table View"
+              className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg transition-all text-xs font-semibold ${
+                viewMode === 'list' 
+                  ? 'bg-white shadow-sm text-blue-600' 
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
             >
-              <Database className="w-4 h-4" />
+              <Database className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline">Devices</span>
             </button>
             <button 
               onClick={() => onViewModeChange('processors')}
-              title="Processors Matrix (processor.json)"
-              className={`p-1.5 rounded-md transition-all ${viewMode === 'processors' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+              title="Processors Visual Showcase & Matrix"
+              className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg transition-all text-xs font-semibold ${
+                viewMode === 'processors' 
+                  ? 'bg-white shadow-sm text-blue-600' 
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
             >
-              <Cpu className="w-4 h-4" />
+              <Cpu className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline">Processors</span>
             </button>
           </div>
         </div>

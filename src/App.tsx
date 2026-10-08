@@ -26,10 +26,44 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
+  const getInitialViewMode = (): ViewMode => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.toLowerCase();
+      if (hash.includes('processor')) return 'processors';
+      if (hash.includes('device') || hash.includes('list') || hash.includes('table')) return 'list';
+      if (hash.includes('dashboard')) return 'dashboard';
+      const params = new URLSearchParams(window.location.search);
+      const v = params.get('view');
+      if (v === 'processors' || v === 'list' || v === 'dashboard') return v;
+    }
+    return 'dashboard';
+  };
+
   const [sortMetric, setSortMetric] = useState<MetricKey>('multi'); 
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState<ViewMode>('dashboard');
+  const [viewMode, setViewMode] = useState<ViewMode>(getInitialViewMode);
   
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    if (typeof window !== 'undefined') {
+      const targetHash = mode === 'dashboard' ? '' : `#${mode}`;
+      if (window.location.hash !== targetHash) {
+        history.replaceState(null, '', targetHash || window.location.pathname);
+      }
+    }
+  };
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.toLowerCase();
+      if (hash.includes('processor')) setViewMode('processors');
+      else if (hash.includes('device') || hash.includes('list') || hash.includes('table')) setViewMode('list');
+      else if (hash.includes('dashboard') || hash === '' || hash === '#') setViewMode('dashboard');
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
   const [filterMode, setFilterMode] = useState<FilterMode>('family');
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null); 
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
@@ -189,6 +223,7 @@ export default function App() {
           coreConfig,
           specs,
           memoryBandwidth,
+          releaseDate: item.releaseDate || proc?.releaseDate,
           processor: proc,
           scores: {
             single: item.single || 0,
@@ -468,7 +503,7 @@ export default function App() {
         searchTerm={searchTerm}
         onSearchTermChange={setSearchTerm}
         viewMode={viewMode}
-        onViewModeChange={setViewMode}
+        onViewModeChange={handleViewModeChange}
       />
 
       <main className="w-full px-2 xl:px-8 py-3 pb-8 space-y-3">
@@ -543,8 +578,19 @@ export default function App() {
         ) : (
           <ProcessorsMatrixView
             filteredProcessors={filteredProcessors}
+            allProcessors={processorList}
+            processedData={processedData}
             searchTerm={searchTerm}
+            onSearchTermChange={setSearchTerm}
+            selectedGroup={selectedGroup}
+            onGroupSelect={handleGroupSelect}
+            filterMode={filterMode}
+            onFilterModeChange={handleFilterModeChange}
             onSelectProcessor={setSelectedProcessorModal}
+            onFilterDevices={(chip) => {
+              setSearchTerm(chip);
+              handleViewModeChange('list');
+            }}
           />
         )}
       </main>
@@ -562,7 +608,7 @@ export default function App() {
         onClose={() => setSelectedProcessorModal(null)}
         onFilterDevices={(chip) => {
           setSearchTerm(chip);
-          setViewMode('list');
+          handleViewModeChange('list');
         }}
       />
     </div>

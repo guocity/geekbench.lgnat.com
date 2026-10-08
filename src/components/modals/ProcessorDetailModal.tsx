@@ -1,7 +1,8 @@
 import React from 'react';
-import { X, Zap, ExternalLink } from 'lucide-react';
+import { X, Zap, ExternalLink, Calendar } from 'lucide-react';
 import { ProcessorDetail } from '../../types';
 import { DieShotGallery } from '../gallery/DieShotGallery';
+import { formatReleaseDate } from '../../constants';
 
 export interface ProcessorDetailModalProps {
   processor: ProcessorDetail | null;
@@ -28,6 +29,12 @@ export const ProcessorDetailModal: React.FC<ProcessorDetailModalProps> = ({ proc
               <span className="text-xs font-medium text-slate-400">
                 {processor.family} · {processor.tier} tier
               </span>
+              {processor.releaseDate && (
+                <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 flex items-center gap-1">
+                  <Calendar className="w-2.5 h-2.5 text-slate-400" />
+                  {formatReleaseDate(processor.releaseDate)}
+                </span>
+              )}
               {processor.rayTracing && (
                 <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
                   Hardware RT
@@ -88,6 +95,10 @@ export const ProcessorDetailModal: React.FC<ProcessorDetailModalProps> = ({ proc
           <div className="space-y-2">
             <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Silicon Specifications</h4>
             <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-3 rounded-xl border border-slate-200">
+              <div>
+                <span className="text-slate-400 block text-[11px]">Release Date</span>
+                <span className="font-semibold text-slate-800">{formatReleaseDate(processor.releaseDate)}</span>
+              </div>
               <div>
                 <span className="text-slate-400 block text-[11px]">Process Node</span>
                 <span className="font-semibold text-slate-800">{processor.processNode}</span>
