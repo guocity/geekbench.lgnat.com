@@ -186,6 +186,7 @@ const MetricScatter = React.memo<MetricScatterProps>(({
   xKey, 
   xLabel, 
   isYear = false, 
+  sortMetric,
   filteredData, 
   onSelectDetail, 
   selectedGroup, 
@@ -201,12 +202,12 @@ const MetricScatter = React.memo<MetricScatterProps>(({
   }, [filteredData, xKey, isYear]);
 
   return (
-    <Card className="p-3">
-      <div className="flex items-center justify-between mb-2">
-        <h4 className="text-xs font-bold text-slate-800 tracking-tight">{title}</h4>
+    <Card className={`p-3 h-[255px] flex flex-col transition-all ${sortMetric === metricKey ? 'border-blue-400 ring-2 ring-blue-100 bg-blue-50/10' : ''}`}>
+      <div className="flex items-center justify-between mb-2 shrink-0">
+        <h4 className={`text-xs font-bold tracking-tight ${sortMetric === metricKey ? 'text-blue-600' : 'text-slate-800'}`}>{title}</h4>
         <span className="text-[10px] text-slate-400 font-medium">vs {xLabel}</span>
       </div>
-      <div className="h-44 w-full">
+      <div className="flex-1 w-full min-h-0">
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
@@ -316,31 +317,31 @@ const MetricBarChart = React.memo<MetricBarChartProps>(({
   const groupKey = filterMode === 'family' ? 'family' : 'tier';
 
   return (
-    <Card className="p-3">
-      <div className="flex items-center justify-between mb-2">
+    <Card className="p-3.5 h-[580px] flex flex-col overflow-hidden">
+      <div className="flex justify-between items-start mb-2 shrink-0">
         <div>
-          <h4 className="text-xs font-bold text-slate-800 tracking-tight">{title}</h4>
-          <p className="text-[10px] text-slate-400">{subtitle}</p>
+          <h3 className="font-bold text-slate-800 text-sm">{title}</h3>
+          <p className="text-[10px] text-slate-500">{subtitle}</p>
         </div>
-        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${badgeClass}`}>
+        <div className={`text-[9px] font-semibold px-2 py-1 rounded uppercase tracking-wide ${badgeClass}`}>
           {badgeText}
-        </span>
+        </div>
       </div>
-      <div className="h-44 w-full">
+      <div className="flex-1 w-full min-h-0 overflow-hidden">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart 
             data={data} 
             layout="vertical" 
-            margin={{ top: 0, right: 30, bottom: 0, left: 10 }}
-            barCategoryGap={1}
+            margin={{ left: -5, right: 65, top: 0, bottom: 0 }}
+            barCategoryGap="8%"
           >
-            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-            <XAxis type="number" hide domain={[0, 'dataMax']} />
+            <CartesianGrid horizontal={true} vertical={false} stroke="#f1f5f9" />
+            <XAxis type="number" hide domain={[0, (dataMax: number) => Math.round(dataMax * 1.12)]} />
             <YAxis 
               type="category" 
               dataKey="displayName" 
               width={65} 
-              tick={({ x, y, payload }) => (
+              tick={({ x, y, payload }: any) => (
                 <text 
                   x={x} 
                   y={y} 
@@ -1306,9 +1307,17 @@ export default function App() {
     }));
   };
 
+  const handleFilterModeChange = (mode: 'family' | 'tier') => {
+    setFilterMode(mode);
+    setSelectedGroup(null);
+  };
+
   const handleGroupSelect = (group: string) => {
     setSelectedGroup(prev => prev === group ? null : group);
   };
+
+  const activeColorMap = filterMode === 'family' ? FAMILY_COLORS : TIER_COLORS;
+  const getGroupLabel = (key: string) => filterMode === 'tier' ? TIER_LABELS[key] || key : key;
 
   const SortIcon = ({ columnKey }: { columnKey: string }) => {
     if (tableSortConfig.key !== columnKey) return <ArrowUpDown className="w-3 h-3 text-slate-300 inline ml-1" />;
@@ -1341,32 +1350,160 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100/60 font-sans text-slate-800 pb-12 selection:bg-blue-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-blue-100 pb-0">
       {/* Top Header Bar */}
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-400 flex items-center justify-center shadow-md shadow-blue-500/20 text-white">
-              <Cpu className="w-4 h-4" />
+        <div className="w-full mx-auto px-2 xl:px-8 h-14 sm:h-16 flex items-center justify-between gap-2 md:gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+            <div className="bg-slate-900 text-white p-1.5 sm:p-2 rounded-lg shadow-sm">
+              <Cpu className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-sm font-bold tracking-tight text-slate-900 leading-none">SiliconBench</h1>
-                <span className="text-[10px] bg-slate-100 text-slate-600 font-semibold px-1.5 py-0.5 rounded border border-slate-200">
-                  M1–M6 & A-Series
-                </span>
-              </div>
-              <p className="text-[10px] text-slate-400 mt-0.5">Geekbench 6 Apple Silicon Performance Matrix</p>
-            </div>
+            <span className="hidden md:block font-bold text-lg tracking-tight">Silicon<span className="text-slate-400 font-normal">Bench</span></span>
           </div>
 
-          {/* Search Box */}
-          <div className="flex-1 max-w-md mx-2 hidden sm:block">
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+          <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-1 justify-end min-w-0">
+            {/* Desktop Full Chipset / Mode Bar (shown when enough space: xl+) */}
+            <div className="hidden xl:flex items-center shrink-0">
+              <div className="flex bg-slate-200/60 p-1 rounded-xl items-center gap-1 mr-2">
+                <button 
+                  onClick={() => handleFilterModeChange('family')} 
+                  className={`px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all ${filterMode === 'family' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  Gen
+                </button>
+                <button 
+                  onClick={() => handleFilterModeChange('tier')} 
+                  className={`px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all ${filterMode === 'tier' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  Tier
+                </button>
+              </div>
+
+              <div className="flex items-center bg-slate-100 p-1 rounded-xl">
+                {Object.keys(activeColorMap).map(key => (
+                  <button
+                    key={key}
+                    onClick={() => handleGroupSelect(key)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg transition-all whitespace-nowrap ${
+                      selectedGroup === key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                    } ${selectedGroup && selectedGroup !== key ? 'opacity-50' : 'opacity-100'}`}
+                  >
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: activeColorMap[key] }}></span>
+                    {getGroupLabel(key)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Processor Filter Dropdown (shown when space is tight: <xl) */}
+            <div className="xl:hidden relative shrink-0">
+              <button
+                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
+                  selectedGroup 
+                    ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-sm' 
+                    : 'bg-slate-100 text-slate-700 border-transparent hover:bg-slate-200'
+                }`}
+              >
+                {selectedGroup && (
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: activeColorMap[selectedGroup] }}></span>
+                )}
+                <span className="whitespace-nowrap">
+                  {selectedGroup ? getGroupLabel(selectedGroup) : (filterMode === 'family' ? 'Chipset' : 'Tier')}
+                </span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isFilterOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isFilterOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsFilterOpen(false)} />
+                  <div className="absolute top-full left-0 mt-1.5 w-48 bg-white rounded-xl shadow-xl border border-slate-200 p-2 z-50">
+                    <div className="flex bg-slate-100 p-1 rounded-lg mb-2">
+                      <button 
+                        onClick={() => handleFilterModeChange('family')} 
+                        className={`flex-1 py-1 text-xs font-semibold rounded-md transition-all ${filterMode === 'family' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+                      >
+                        Gen
+                      </button>
+                      <button 
+                        onClick={() => handleFilterModeChange('tier')} 
+                        className={`flex-1 py-1 text-xs font-semibold rounded-md transition-all ${filterMode === 'tier' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+                      >
+                        Tier
+                      </button>
+                    </div>
+                    <div className="text-[11px] font-semibold text-slate-400 px-2 py-1">
+                      Select {filterMode === 'family' ? 'Generation' : 'Tier'}
+                    </div>
+                    <div className="space-y-0.5 max-h-56 overflow-y-auto">
+                      {Object.keys(activeColorMap).map(key => (
+                        <button
+                          key={key}
+                          onClick={() => {
+                            handleGroupSelect(key);
+                            setIsFilterOpen(false);
+                          }}
+                          className={`w-full text-left px-2.5 py-1.5 text-xs rounded-lg hover:bg-slate-50 flex items-center justify-between transition-colors ${
+                            selectedGroup === key ? 'bg-blue-50 font-bold text-blue-700' : 'text-slate-700'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: activeColorMap[key] }}></span>
+                            {getGroupLabel(key)}
+                          </span>
+                          {selectedGroup === key && <span className="text-blue-600 text-[10px]">✓</span>}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="h-6 w-px bg-slate-200 shrink-0 hidden sm:block"></div>
+
+            {/* Metrics Selection Tabs */}
+            <div className="hidden md:flex bg-slate-100 p-1 rounded-xl items-center shrink-0">
+              {(Object.keys(METRIC_LABELS) as MetricKey[]).map((key) => (
+                <button
+                  key={key}
+                  onClick={() => setSortMetric(key)}
+                  className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap ${
+                    sortMetric === key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  {METRIC_LABELS[key]}
+                </button>
+              ))}
+            </div>
+            
+            {/* Mobile Metric Selector */}
+            <div className="md:hidden relative group shrink-0">
+              <button className="flex items-center gap-1.5 bg-slate-100 px-2.5 py-1.5 rounded-lg text-xs font-medium">
+                <ArrowUpDown className="w-3 h-3 text-slate-500" /> 
+                <span className="whitespace-nowrap">{METRIC_LABELS[sortMetric].split(' ')[0]}</span>
+              </button>
+              <div className="absolute top-full right-0 mt-1.5 w-40 bg-white rounded-xl shadow-xl border border-slate-200 p-1 hidden group-hover:block z-50">
+                {(Object.keys(METRIC_LABELS) as MetricKey[]).map((key) => (
+                  <button
+                    key={key}
+                    onClick={() => setSortMetric(key)}
+                    className={`w-full text-left px-3 py-1.5 text-xs rounded-lg ${
+                      sortMetric === key ? 'bg-slate-100 font-bold' : 'hover:bg-slate-50'
+                    }`}
+                  >
+                    {METRIC_LABELS[key]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Search Input */}
+            <div className="relative shrink min-w-[70px] sm:min-w-[120px] max-w-[160px] sm:max-w-[200px] w-full">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
               <input 
                 type="text" 
-                placeholder="Search chips, devices, RAM (e.g. 16GB, LPDDR6, M6)..." 
+                placeholder="Search specs, chip, model..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full bg-slate-100 focus:bg-white border border-transparent focus:border-blue-500 pl-8 pr-3 py-1.5 rounded-xl text-xs transition-all outline-none"
@@ -1378,27 +1515,24 @@ export default function App() {
              <div className="bg-slate-100 p-1 rounded-lg flex shrink-0">
                 <button 
                   onClick={() => setViewMode('dashboard')}
-                  title="Dashboard Charts"
-                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${viewMode === 'dashboard' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-800'}`}
+                  title="Dashboard View"
+                  className={`p-1.5 rounded-md transition-all ${viewMode === 'dashboard' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
                 >
-                  <LayoutDashboard className="w-3.5 h-3.5" />
-                  <span className="hidden md:inline">Charts</span>
+                  <LayoutDashboard className="w-4 h-4" />
                 </button>
                 <button 
                   onClick={() => setViewMode('list')}
-                  title="Devices Table (devices.json)"
-                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-800'}`}
+                  title="Table View"
+                  className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
                 >
-                  <Database className="w-3.5 h-3.5" />
-                  <span className="hidden md:inline">Devices ({activeData.length})</span>
+                  <Database className="w-4 h-4" />
                 </button>
                 <button 
                   onClick={() => setViewMode('processors')}
-                  title="Processor Matrix (processor.json)"
-                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${viewMode === 'processors' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-800'}`}
+                  title="Processors Matrix (processor.json)"
+                  className={`p-1.5 rounded-md transition-all ${viewMode === 'processors' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
                 >
-                  <Cpu className="w-3.5 h-3.5" />
-                  <span className="hidden md:inline">Processors ({processorList.length})</span>
+                  <Cpu className="w-4 h-4" />
                 </button>
              </div>
           </div>
