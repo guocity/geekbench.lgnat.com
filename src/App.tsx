@@ -275,8 +275,14 @@ export default function App() {
       const score = item.scores[sortMetric] || 0;
       if (score > 0) {
         g.scores.push(score);
-        if (item.cpuCores > 0) {
-          g.effs.push(score / item.cpuCores);
+        if (sortMetric === 'metal' || sortMetric === 'opencl') {
+          if (item.gpuCores > 0) {
+            g.effs.push(score / item.gpuCores);
+          }
+        } else if (sortMetric === 'multi') {
+          if (item.cpuCores > 0) {
+            g.effs.push(score / item.cpuCores);
+          }
         }
       }
 

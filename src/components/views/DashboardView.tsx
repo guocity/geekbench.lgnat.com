@@ -92,7 +92,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* 4 Bar Charts Grid (Tall h-[580px] Cards with right margin) */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
         <MetricBarChart
-          title={filterMode === 'tier' ? "Tier Performance" : "Family Performance"} 
+          title={filterMode === 'tier' ? "Tier Performance" : (sortMetric === 'single' ? "Performance" : "Family Performance")} 
           subtitle={`Range & Avg ${METRIC_LABELS[sortMetric]} by ${filterMode === 'tier' ? 'Tier' : 'Chipset'}`}
           badgeText={sortMetric === 'bandwidth' ? "GB/s" : sortMetric} 
           badgeClass="bg-blue-50 text-blue-600"
@@ -108,20 +108,40 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           selectedDevice={selectedDevice} 
           filterMode={filterMode}
         />
-        <MetricBarChart
-          title="Core Efficiency" 
-          subtitle={`Range & Avg ${sortMetric === 'bandwidth' ? 'Multi-Core' : METRIC_LABELS[sortMetric]} Score Per Core`}
-          badgeText="Score / Core" 
-          badgeClass="bg-amber-50 text-amber-600"
-          data={aggregatedData} 
-          dataKey="maxEff" 
-          valueFormat={(v) => v.toLocaleString()}
-          tooltipRanges={(d) => ({ range: `${d.minEff} - ${d.maxEff}`, avg: d.avgEff.toLocaleString() })}
-          onGroupSelect={onGroupSelect} 
-          selectedGroup={selectedGroup} 
-          selectedDevice={selectedDevice} 
-          filterMode={filterMode}
-        />
+        {sortMetric === 'single' ? (
+          <MetricBarChart
+            title="Memory Bandwidth" 
+            subtitle={`Range & Peak Unified Memory Bandwidth by ${filterMode === 'tier' ? 'Tier' : 'Chipset'}`}
+            badgeText="GB/s" 
+            badgeClass="bg-purple-50 text-purple-600"
+            data={aggregatedData} 
+            dataKey="maxBw" 
+            valueFormat={(v) => `${v.toLocaleString()} GB/s`}
+            tooltipRanges={(d) => ({ 
+              range: `${d.minBw.toLocaleString()} - ${d.maxBw.toLocaleString()} GB/s`, 
+              avg: `${d.avgBw.toLocaleString()} GB/s` 
+            })}
+            onGroupSelect={onGroupSelect} 
+            selectedGroup={selectedGroup} 
+            selectedDevice={selectedDevice} 
+            filterMode={filterMode}
+          />
+        ) : (
+          <MetricBarChart
+            title={sortMetric === 'metal' || sortMetric === 'opencl' ? "Compute Efficiency" : "Core Efficiency"} 
+            subtitle={`Range & Avg ${sortMetric === 'bandwidth' ? 'Multi-Core' : METRIC_LABELS[sortMetric]} Score Per ${sortMetric === 'metal' || sortMetric === 'opencl' ? 'GPU Core' : 'Core'}`}
+            badgeText={sortMetric === 'metal' || sortMetric === 'opencl' ? "Score / GPU" : "Score / Core"} 
+            badgeClass="bg-amber-50 text-amber-600"
+            data={aggregatedData} 
+            dataKey="maxEff" 
+            valueFormat={(v) => v.toLocaleString()}
+            tooltipRanges={(d) => ({ range: `${d.minEff} - ${d.maxEff}`, avg: d.avgEff.toLocaleString() })}
+            onGroupSelect={onGroupSelect} 
+            selectedGroup={selectedGroup} 
+            selectedDevice={selectedDevice} 
+            filterMode={filterMode}
+          />
+        )}
         <MetricBarChart
           title="Clock Frequencies" 
           subtitle="Peak Boost Clock per Architecture (GHz)"
