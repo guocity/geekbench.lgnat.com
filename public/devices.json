@@ -1554,18 +1554,18 @@
     "opencl": 27529
   },
   {
-    "id": "iphone-18-pro-a20-pro-a20-pro-6c-7g",
-    "model": "iPhone 18 Pro (A20 Pro)",
+    "id": "iphone-18-a20-a20-6c-5g",
+    "model": "iPhone 18 (A20)",
     "device": "iPhone",
     "year": 2026,
-    "chip": "A20 Pro",
+    "chip": "A20",
     "cpuCores": 6,
-    "gpuCores": 7,
-    "clock": "4.8",
-    "single": 4530,
-    "multi": 12580,
-    "metal": 61483,
-    "opencl": 47400
+    "gpuCores": 5,
+    "clock": "4.6",
+    "single": 4210,
+    "multi": 11450,
+    "metal": 54800,
+    "opencl": 37200
   },
   {
     "id": "mac-studio-2026-m5-ultra-36-core-m5-ultra-36c-80g",
@@ -1596,18 +1596,18 @@
     "opencl": 172400
   },
   {
-    "id": "iphone-18-a20-a20-6c-5g",
-    "model": "iPhone 18 (A20)",
+    "id": "iphone-18-pro-a20-pro-a20-pro-6c-7g",
+    "model": "iPhone 18 Pro (A20 Pro)",
     "device": "iPhone",
     "year": 2026,
-    "chip": "A20",
+    "chip": "A20 Pro",
     "cpuCores": 6,
-    "gpuCores": 5,
-    "clock": "4.6",
-    "single": 4210,
-    "multi": 11450,
-    "metal": 54800,
-    "opencl": 37200
+    "gpuCores": 7,
+    "clock": "4.8",
+    "single": 4530,
+    "multi": 12580,
+    "metal": 61483,
+    "opencl": 47400
   },
   {
     "id": "macbook-pro-14-inch-2026-m6-16gb-12c-12g",

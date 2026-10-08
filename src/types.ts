@@ -1,5 +1,8 @@
 export type Family = 'M1' | 'M2' | 'M3' | 'M4' | 'M5' | 'M6' | string;
 export type Tier = 'A-Series' | 'base' | 'pro' | 'max' | 'ultra' | string;
+export type MetricKey = 'single' | 'multi' | 'metal' | 'opencl' | 'bandwidth';
+export type ViewMode = 'dashboard' | 'list' | 'processors';
+export type FilterMode = 'family' | 'tier';
 
 export interface BenchmarkScores {
   single: number;
