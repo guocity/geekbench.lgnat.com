@@ -194,7 +194,31 @@ export default function App() {
         const l2CacheMB = item.l2CacheMB || proc?.l2CacheMB;
         const slcMB = item.slcMB || proc?.slcMB;
         const systemCache = item.systemCache || proc?.systemCache || (slcMB ? `${slcMB} MB` : '');
-        const coreConfig = item.coreConfig || proc?.coreConfig || `${item.cpuCores} cores`;
+        let superCores = item.superCores !== undefined ? item.superCores : proc?.superCores;
+        let pCores = item.pCores !== undefined ? item.pCores : proc?.pCores;
+        let eCores = item.eCores !== undefined ? item.eCores : proc?.eCores;
+        let coreConfig = item.coreConfig;
+
+        if (!coreConfig) {
+          if (proc) {
+            if (proc.chip === 'M5 Pro' && item.cpuCores === 15) {
+              superCores = 5;
+              pCores = 10;
+              eCores = 0;
+              coreConfig = '5 Super + 10P';
+            } else if (proc.chip === 'M5 Ultra' && item.cpuCores === 30) {
+              superCores = 10;
+              pCores = 20;
+              eCores = 0;
+              coreConfig = '10 Super + 20P';
+            } else {
+              coreConfig = proc.coreConfig;
+            }
+          }
+          if (!coreConfig) {
+            coreConfig = `${item.cpuCores} cores`;
+          }
+        }
         
         const ramStr = item.ram ? `, ${item.ram} RAM` : '';
         const specs = item.specs || (
@@ -220,6 +244,9 @@ export default function App() {
           memoryBusWidth,
           memoryType,
           memorySpeed,
+          superCores,
+          pCores,
+          eCores,
           coreConfig,
           specs,
           memoryBandwidth,

@@ -152,9 +152,10 @@
       30,
       36
     ],
+    "superCores": 12,
     "pCores": 24,
-    "eCores": 12,
-    "coreConfig": "24P + 12E",
+    "eCores": 0,
+    "coreConfig": "12 Super + 24P",
     "clock": "4.6",
     "gpuCores": [
       64,
@@ -169,9 +170,9 @@
     "memoryBusWidth": "1024-bit",
     "memoryType": "LPDDR5X-9600",
     "memorySpeed": "9600 MT/s",
-    "memoryBandwidth": 1365.3,
+    "memoryBandwidth": 1228.8,
     "releaseDate": "2026-06",
-    "specs": "Apple M5 Ultra @ 4.6 GHz (24P + 12E CPU cores, 80 GPU cores, 128 MB SLC, 1024-bit LPDDR5X-9600), 1365.3 GB/s, 3nm (TSMC N3P)"
+    "specs": "Apple M5 Ultra @ 4.6 GHz (12 Super + 24P CPU cores, 80 GPU cores, 128 MB SLC, 1024-bit LPDDR5X-9600), 1228.8 GB/s, 3nm (TSMC N3P)"
   },
   {
     "chip": "M5 Max",
@@ -180,11 +181,12 @@
     "tier": "max",
     "processNode": "3nm (TSMC N3P)",
     "transistorTech": "FinFET",
-    "packaging": "Apple SiP",
+    "packaging": "Apple Fusion Architecture",
     "cpuCores": 18,
+    "superCores": 6,
     "pCores": 12,
-    "eCores": 6,
-    "coreConfig": "12P + 6E",
+    "eCores": 0,
+    "coreConfig": "6 Super + 12P",
     "clock": "4.6",
     "gpuCores": [
       32,
@@ -199,9 +201,9 @@
     "memoryBusWidth": "512-bit",
     "memoryType": "LPDDR5X-9600",
     "memorySpeed": "9600 MT/s",
-    "memoryBandwidth": 682.6,
-    "releaseDate": "2026-01",
-    "specs": "Apple M5 Max @ 4.6 GHz (12P + 6E CPU cores, 40 GPU cores, 64 MB SLC, 512-bit LPDDR5X-9600), 682.6 GB/s, 3nm (TSMC N3P)"
+    "memoryBandwidth": 614.4,
+    "releaseDate": "2026-03",
+    "specs": "Apple M5 Max @ 4.6 GHz (6 Super + 12P CPU cores, 40 GPU cores, 64 MB SLC, 512-bit LPDDR5X-9600), 614.4 GB/s, 3nm (TSMC N3P)"
   },
   {
     "chip": "M5 Pro",
@@ -210,14 +212,15 @@
     "tier": "pro",
     "processNode": "3nm (TSMC N3P)",
     "transistorTech": "FinFET",
-    "packaging": "Apple SiP",
+    "packaging": "Apple Fusion Architecture",
     "cpuCores": [
       15,
       18
     ],
+    "superCores": 6,
     "pCores": 12,
-    "eCores": 6,
-    "coreConfig": "12P + 6E",
+    "eCores": 0,
+    "coreConfig": "6 Super + 12P",
     "clock": "4.6",
     "gpuCores": [
       16,
@@ -232,9 +235,9 @@
     "memoryBusWidth": "256-bit",
     "memoryType": "LPDDR5X-9600",
     "memorySpeed": "9600 MT/s",
-    "memoryBandwidth": 341.3,
-    "releaseDate": "2026-01",
-    "specs": "Apple M5 Pro @ 4.6 GHz (12P + 6E CPU cores, 20 GPU cores, 32 MB SLC, 256-bit LPDDR5X-9600), 341.3 GB/s, 3nm (TSMC N3P)"
+    "memoryBandwidth": 307.2,
+    "releaseDate": "2026-03",
+    "specs": "Apple M5 Pro @ 4.6 GHz (6 Super + 12P CPU cores, 20 GPU cores, 32 MB SLC, 256-bit LPDDR5X-9600), 307.2 GB/s, 3nm (TSMC N3P)"
   },
   {
     "chip": "M5",
@@ -246,9 +249,10 @@
     "dieSizeMm2": 154,
     "packaging": "Apple SiP",
     "cpuCores": 10,
-    "pCores": 4,
+    "superCores": 4,
+    "pCores": 0,
     "eCores": 6,
-    "coreConfig": "4P + 6E",
+    "coreConfig": "4 Super + 6E",
     "clock": "4.6",
     "gpuCores": [
       8,
@@ -264,8 +268,20 @@
     "memoryType": "LPDDR5X-9600",
     "memorySpeed": "9600 MT/s",
     "memoryBandwidth": 153.6,
+    "dieShots": [
+      {
+        "url": "images/die-shots/m5-die-shot-1.jpg",
+        "originalUrl": "https://pbs.twimg.com/media/HT9pyHnWYAAM3HY?format=jpg&name=4096x4096",
+        "caption": "Apple M5 Annotated Micro-Architecture Floorplan (4 Super + 6E Cores, SemiAnalysis)"
+      },
+      {
+        "url": "images/die-shots/m5-die-shot-backup.jpg",
+        "originalUrl": "https://pbs.twimg.com/media/HS9wa9vbgAAb2Mm?format=webp&name=large",
+        "caption": "Apple M5 Silicon Die Shot Overview (3nm TSMC N3P, 154 mm²)"
+      }
+    ],
     "releaseDate": "2025-10",
-    "specs": "Apple M5 @ 4.6 GHz (4P + 6E CPU cores, 10 GPU cores, 16 MB SLC, 128-bit LPDDR5X-9600), 153.6 GB/s, 3nm (TSMC N3P)"
+    "specs": "Apple M5 @ 4.6 GHz (4 Super + 6E CPU cores, 10 GPU cores, 16 MB SLC, 128-bit LPDDR5X-9600), 153.6 GB/s, 3nm (TSMC N3P)"
   },
   {
     "chip": "A19 Pro",
@@ -581,6 +597,12 @@
         "description": "Full 512-bit memory bus configuration (409.6 GB/s)"
       }
     ],
+    "dieShots": [
+      {
+        "url": "images/die-shots/m3-max-die-shot-1.png",
+        "caption": "Apple M3 Max Silicon Die Shot (3nm TSMC N3B, 92B transistors)"
+      }
+    ],
     "releaseDate": "2023-10",
     "specs": "Apple M3 Max @ 4.1 GHz (12P + 4E CPU cores, 40 GPU cores, 48 MB SLC, 512-bit LPDDR5-6400), 307.2 - 409.6 GB/s, 3nm (TSMC N3B)"
   },
@@ -614,6 +636,12 @@
     "memoryType": "LPDDR5-6400",
     "memorySpeed": "6400 MT/s",
     "memoryBandwidth": 153.6,
+    "dieShots": [
+      {
+        "url": "images/die-shots/m3-pro-die-shot-1.png",
+        "caption": "Apple M3 Pro Silicon Die Shot (3nm TSMC N3B, 37B transistors)"
+      }
+    ],
     "releaseDate": "2023-10",
     "specs": "Apple M3 Pro @ 4.1 GHz (6P + 6E CPU cores, 18 GPU cores, 24 MB SLC, 192-bit LPDDR5-6400), 153.6 GB/s, 3nm (TSMC N3B)"
   },
@@ -644,6 +672,12 @@
     "memoryType": "LPDDR5-6400",
     "memorySpeed": "6400 MT/s",
     "memoryBandwidth": 102.4,
+    "dieShots": [
+      {
+        "url": "images/die-shots/m3-die-shot-1.png",
+        "caption": "Apple M3 Silicon Die Shot (3nm TSMC N3B, 25B transistors)"
+      }
+    ],
     "releaseDate": "2023-10",
     "specs": "Apple M3 @ 4.1 GHz (4P + 4E CPU cores, 10 GPU cores, 8 MB SLC, 128-bit LPDDR5-6400), 102.4 GB/s, 3nm (TSMC N3B)"
   },

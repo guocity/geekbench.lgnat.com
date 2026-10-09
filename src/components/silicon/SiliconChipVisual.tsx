@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ProcessorDetail } from '../../types';
+import { DieShot, ProcessorDetail } from '../../types';
 import { AppleLogo } from './AppleLogo';
 import { DieFloorplanVisual } from './DieFloorplanVisual';
 import { FAMILY_COLORS, TIER_COLORS, formatReleaseDate } from '../../constants';
@@ -7,7 +7,7 @@ import { Layers, Cpu, Eye, Image as ImageIcon, ZoomIn, Sparkles } from 'lucide-r
 
 export interface SiliconChipVisualProps {
   processor: ProcessorDetail;
-  onOpenDieShotLightbox?: (dieShot: { url: string; caption: string }) => void;
+  onOpenDieShotLightbox?: (dieShot: DieShot, allDieShots?: DieShot[], chipName?: string) => void;
   initialMode?: 'package' | 'floorplan' | 'dieshot';
 }
 
@@ -21,6 +21,8 @@ export const SiliconChipVisual: React.FC<SiliconChipVisualProps> = ({
       ? 'dieshot' 
       : initialMode
   );
+  const [isDieShotHovered, setIsDieShotHovered] = useState(false);
+  const [dieShotHoverCoord, setDieShotHoverCoord] = useState<{ x: number; y: number }>({ x: 50, y: 50 });
 
   const hasDieShots = processor.dieShots && processor.dieShots.length > 0;
   const isUltra = processor.tier === 'ultra' || processor.packaging?.includes('UltraFusion');
@@ -116,7 +118,7 @@ export const SiliconChipVisual: React.FC<SiliconChipVisualProps> = ({
                 }`}
               >
                 <ImageIcon className="w-2.5 h-2.5 text-purple-400" />
-                4K Die Shot
+                Die Shot
               </button>
             )}
           </div>
@@ -320,24 +322,51 @@ export const SiliconChipVisual: React.FC<SiliconChipVisualProps> = ({
           </div>
         )}
 
-        {/* 3. REAL 4K DIE SHOT VIEW (High Resolution Microscope Die Photo) */}
+        {/* 3. REAL DIE SHOT VIEW (High Resolution Microscope Die Photo) */}
         {visualMode === 'dieshot' && hasDieShots && (
           <div className="py-1 space-y-1.5">
             <div 
               className="relative rounded-xl overflow-hidden border border-purple-500/40 bg-slate-950 aspect-[16/10] cursor-pointer group/shot shadow-lg"
-              onClick={() => onOpenDieShotLightbox && onOpenDieShotLightbox(processor.dieShots![0])}
+              onMouseMove={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+                const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+                setIsDieShotHovered(true);
+                setDieShotHoverCoord({ x, y });
+              }}
+              onMouseLeave={() => setIsDieShotHovered(false)}
+              onClick={() => onOpenDieShotLightbox && onOpenDieShotLightbox(processor.dieShots![0], processor.dieShots, processor.name)}
             >
               <img 
                 src={processor.dieShots![0].url} 
                 alt={processor.dieShots![0].caption}
-                className="w-full h-full object-cover group-hover/shot:scale-105 transition-transform duration-300"
+                style={
+                  isDieShotHovered
+                    ? {
+                        transformOrigin: `${dieShotHoverCoord.x}% ${dieShotHoverCoord.y}%`,
+                        transform: 'scale(2.5)',
+                        transition: 'transform 0.08s ease-out',
+                      }
+                    : {
+                        transformOrigin: 'center center',
+                        transform: 'scale(1)',
+                        transition: 'transform 0.3s ease-out',
+                      }
+                }
+                className="w-full h-full object-cover pointer-events-none"
                 loading="lazy"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end justify-between p-2">
+              {isDieShotHovered && (
+                <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-purple-950/90 text-purple-200 border border-purple-500/70 text-[9px] font-mono flex items-center gap-1 shadow-lg pointer-events-none z-10 backdrop-blur">
+                  <ZoomIn className="w-3 h-3 text-purple-300" />
+                  <span>Hover to zoom • Click for full screen</span>
+                </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end justify-between p-2 pointer-events-none">
                 <span className="text-[10px] text-white font-medium line-clamp-1">{processor.dieShots![0].caption}</span>
                 <span className="px-2 py-0.5 rounded bg-purple-600/90 text-white text-[9px] font-bold flex items-center gap-1 shadow shrink-0">
                   <ZoomIn className="w-3 h-3" />
-                  Inspect 4K
+                  Inspect Die Shot
                 </span>
               </div>
             </div>

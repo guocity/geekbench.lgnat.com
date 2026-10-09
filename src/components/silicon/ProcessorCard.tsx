@@ -1,5 +1,5 @@
 import React from 'react';
-import { ProcessorDetail, ProcessedItem } from '../../types';
+import { ProcessorDetail, ProcessedItem, DieShot } from '../../types';
 import { SiliconChipVisual } from './SiliconChipVisual';
 import { ChipIconSvg } from './ChipIconSvg';
 import { FAMILY_COLORS, TIER_COLORS, TIER_LABELS, formatReleaseDate } from '../../constants';
@@ -35,7 +35,7 @@ export interface ProcessorCardProps {
   globalMaxBandwidth: number;
   onSelectProcessor: (processor: ProcessorDetail) => void;
   onFilterDevices?: (chip: string) => void;
-  onOpenDieShotLightbox?: (dieShot: { url: string; caption: string }) => void;
+  onOpenDieShotLightbox?: (dieShot: DieShot, allDieShots?: DieShot[], chipName?: string) => void;
 }
 
 export const ProcessorCard: React.FC<ProcessorCardProps> = ({

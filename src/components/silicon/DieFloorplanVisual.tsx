@@ -11,6 +11,25 @@ export const DieFloorplanVisual: React.FC<DieFloorplanVisualProps> = ({ processo
   const isUltra = processor.tier === 'ultra' || processor.packaging?.includes('UltraFusion');
   const gpuCount = Array.isArray(processor.gpuCores) ? processor.gpuCores[processor.gpuCores.length - 1] : processor.gpuCores;
   const cpuCount = Array.isArray(processor.cpuCores) ? processor.cpuCores[processor.cpuCores.length - 1] : processor.cpuCores;
+
+  const superCount = processor.superCores ?? 0;
+  const pCount = processor.pCores !== undefined 
+    ? processor.pCores 
+    : (processor.superCores ? 0 : Math.ceil(cpuCount * 0.6));
+  const eCount = processor.eCores !== undefined 
+    ? processor.eCores 
+    : Math.floor(cpuCount * 0.4);
+  const totalPerfSuper = superCount + pCount;
+
+  let perfLabel = 'PERF CORES';
+  let perfBadge = `${pCount}P`;
+  if (superCount > 0 && pCount > 0) {
+    perfLabel = 'SUPER + P-CORES';
+    perfBadge = `${superCount}S + ${pCount}P`;
+  } else if (superCount > 0 && pCount === 0) {
+    perfLabel = 'SUPER CORES';
+    perfBadge = `${superCount}S`;
+  }
   
   // Single Die Floorplan representation
   const renderDie = (dieIndex = 0) => (
@@ -41,32 +60,46 @@ export const DieFloorplanVisual: React.FC<DieFloorplanVisualProps> = ({ processo
             {/* Performance / Super Cores */}
             <div className="bg-sky-950/60 rounded p-1 border border-sky-500/20">
               <div className="text-[8px] font-semibold text-sky-300 flex items-center justify-between">
-                <span>{processor.superCores ? 'SUPER + P-CORES' : 'PERF CORES'}</span>
-                <span className="font-mono text-sky-400">{processor.superCores ? `${processor.superCores}S + ${processor.pCores || 4}P` : `${processor.pCores || Math.ceil(cpuCount * 0.6)}P`}</span>
+                <span>{perfLabel}</span>
+                <span className="font-mono text-sky-400">{perfBadge}</span>
               </div>
               <div className="mt-1 flex flex-wrap gap-0.5">
-                {Array.from({ length: (processor.superCores || 0) + (processor.pCores || Math.ceil(cpuCount * 0.6)) }).map((_, i) => (
+                {Array.from({ length: totalPerfSuper }).map((_, i) => (
                   <div 
                     key={i} 
-                    className={`h-2 flex-1 min-w-[7px] rounded-sm ${i < (processor.superCores || 0) ? 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.6)]' : 'bg-sky-400'}`} 
-                    title={i < (processor.superCores || 0) ? "Super Core" : "Performance Core"}
+                    className={`h-2 flex-1 min-w-[7px] rounded-sm ${i < superCount ? 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.6)]' : 'bg-sky-400'}`} 
+                    title={i < superCount ? "Super Core" : "Performance Core"}
                   />
                 ))}
               </div>
             </div>
 
             {/* Efficiency Cores */}
-            <div className="bg-emerald-950/60 rounded p-1 border border-emerald-500/20">
-              <div className="text-[8px] font-semibold text-emerald-300 flex items-center justify-between">
-                <span>EFFICIENCY CORES</span>
-                <span className="font-mono text-emerald-400">{processor.eCores || Math.floor(cpuCount * 0.4)}E</span>
+            {eCount > 0 ? (
+              <div className="bg-emerald-950/60 rounded p-1 border border-emerald-500/20">
+                <div className="text-[8px] font-semibold text-emerald-300 flex items-center justify-between">
+                  <span>EFFICIENCY CORES</span>
+                  <span className="font-mono text-emerald-400">{eCount}E</span>
+                </div>
+                <div className="mt-1 flex flex-wrap gap-0.5">
+                  {Array.from({ length: eCount }).map((_, i) => (
+                    <div key={i} className="h-2 flex-1 min-w-[6px] rounded-sm bg-emerald-400" title="Efficiency Core" />
+                  ))}
+                </div>
               </div>
-              <div className="mt-1 flex flex-wrap gap-0.5">
-                {Array.from({ length: processor.eCores || Math.floor(cpuCount * 0.4) }).map((_, i) => (
-                  <div key={i} className="h-2 flex-1 min-w-[6px] rounded-sm bg-emerald-400" title="Efficiency Core" />
-                ))}
+            ) : (
+              <div className="bg-slate-900/60 rounded p-1 border border-slate-700/40 flex flex-col justify-between">
+                <div className="text-[8px] font-semibold text-slate-400 flex items-center justify-between">
+                  <span>EFFICIENCY CORES</span>
+                  <span className="font-mono text-slate-400">0E</span>
+                </div>
+                <div className="mt-1 flex items-center justify-center py-0.5">
+                  <span className="text-[7.5px] text-slate-400 font-mono tracking-tight text-center">
+                    Pure-Perf Design (No E-Cores)
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* L2 Cache Bar */}
@@ -153,6 +186,13 @@ export const DieFloorplanVisual: React.FC<DieFloorplanVisualProps> = ({ processo
           </div>
         </div>
       </div>
+
+      {/* Fusion Architecture Dual-Die Indicator for Pro/Max */}
+      {processor.packaging?.includes('Fusion') && !isUltra && (
+        <div className="text-[8px] text-center font-mono text-indigo-300 bg-indigo-950/70 rounded py-0.5 border border-indigo-500/30">
+          Dual-Die Chiplet (Apple Fusion Architecture: Dedicated CPU + GPU Dies)
+        </div>
+      )}
 
       {/* UltraFusion Die Indicator for Ultra */}
       {isUltra && (

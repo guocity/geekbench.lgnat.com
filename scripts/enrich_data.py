@@ -74,9 +74,10 @@ PROCESSORS_DATA = [
         "transistorTech": "FinFET",
         "packaging": "UltraFusion (2.5 TB/s)",
         "cpuCores": [30, 36],
+        "superCores": 12,
         "pCores": 24,
-        "eCores": 12,
-        "coreConfig": "24P + 12E",
+        "eCores": 0,
+        "coreConfig": "12 Super + 24P",
         "clock": "4.6",
         "gpuCores": [64, 80],
         "rayTracing": True,
@@ -88,8 +89,8 @@ PROCESSORS_DATA = [
         "memoryBusWidth": "1024-bit",
         "memoryType": "LPDDR5X-9600",
         "memorySpeed": "9600 MT/s",
-        "memoryBandwidth": 1365.3,
-        "specs": "Apple M5 Ultra @ 4.6 GHz (24P + 12E CPU cores, 80 GPU cores, 128 MB SLC, 1024-bit LPDDR5X-9600), 1365.3 GB/s, 3nm (TSMC N3P)"
+        "memoryBandwidth": 1228.8,
+        "specs": "Apple M5 Ultra @ 4.6 GHz (12 Super + 24P CPU cores, 80 GPU cores, 128 MB SLC, 1024-bit LPDDR5X-9600), 1228.8 GB/s, 3nm (TSMC N3P)"
     },
     {
         "chip": "M5 Max",
@@ -98,11 +99,12 @@ PROCESSORS_DATA = [
         "tier": "max",
         "processNode": "3nm (TSMC N3P)",
         "transistorTech": "FinFET",
-        "packaging": "Apple SiP",
+        "packaging": "Apple Fusion Architecture",
         "cpuCores": 18,
+        "superCores": 6,
         "pCores": 12,
-        "eCores": 6,
-        "coreConfig": "12P + 6E",
+        "eCores": 0,
+        "coreConfig": "6 Super + 12P",
         "clock": "4.6",
         "gpuCores": [32, 40],
         "rayTracing": True,
@@ -114,8 +116,8 @@ PROCESSORS_DATA = [
         "memoryBusWidth": "512-bit",
         "memoryType": "LPDDR5X-9600",
         "memorySpeed": "9600 MT/s",
-        "memoryBandwidth": 682.6,
-        "specs": "Apple M5 Max @ 4.6 GHz (12P + 6E CPU cores, 40 GPU cores, 64 MB SLC, 512-bit LPDDR5X-9600), 682.6 GB/s, 3nm (TSMC N3P)"
+        "memoryBandwidth": 614.4,
+        "specs": "Apple M5 Max @ 4.6 GHz (6 Super + 12P CPU cores, 40 GPU cores, 64 MB SLC, 512-bit LPDDR5X-9600), 614.4 GB/s, 3nm (TSMC N3P)"
     },
     {
         "chip": "M5 Pro",
@@ -124,11 +126,12 @@ PROCESSORS_DATA = [
         "tier": "pro",
         "processNode": "3nm (TSMC N3P)",
         "transistorTech": "FinFET",
-        "packaging": "Apple SiP",
+        "packaging": "Apple Fusion Architecture",
         "cpuCores": [15, 18],
+        "superCores": 6,
         "pCores": 12,
-        "eCores": 6,
-        "coreConfig": "12P + 6E",
+        "eCores": 0,
+        "coreConfig": "6 Super + 12P",
         "clock": "4.6",
         "gpuCores": [16, 20],
         "rayTracing": True,
@@ -140,8 +143,8 @@ PROCESSORS_DATA = [
         "memoryBusWidth": "256-bit",
         "memoryType": "LPDDR5X-9600",
         "memorySpeed": "9600 MT/s",
-        "memoryBandwidth": 341.3,
-        "specs": "Apple M5 Pro @ 4.6 GHz (12P + 6E CPU cores, 20 GPU cores, 32 MB SLC, 256-bit LPDDR5X-9600), 341.3 GB/s, 3nm (TSMC N3P)"
+        "memoryBandwidth": 307.2,
+        "specs": "Apple M5 Pro @ 4.6 GHz (6 Super + 12P CPU cores, 20 GPU cores, 32 MB SLC, 256-bit LPDDR5X-9600), 307.2 GB/s, 3nm (TSMC N3P)"
     },
     {
         "chip": "M5",
@@ -153,9 +156,10 @@ PROCESSORS_DATA = [
         "dieSizeMm2": 154.0,
         "packaging": "Apple SiP",
         "cpuCores": 10,
-        "pCores": 4,
+        "superCores": 4,
+        "pCores": 0,
         "eCores": 6,
-        "coreConfig": "4P + 6E",
+        "coreConfig": "4 Super + 6E",
         "clock": "4.6",
         "gpuCores": [8, 10],
         "rayTracing": True,
@@ -168,7 +172,19 @@ PROCESSORS_DATA = [
         "memoryType": "LPDDR5X-9600",
         "memorySpeed": "9600 MT/s",
         "memoryBandwidth": 153.6,
-        "specs": "Apple M5 @ 4.6 GHz (4P + 6E CPU cores, 10 GPU cores, 16 MB SLC, 128-bit LPDDR5X-9600), 153.6 GB/s, 3nm (TSMC N3P)"
+        "dieShots": [
+            {
+                "url": "images/die-shots/m5-die-shot-1.jpg",
+                "originalUrl": "https://pbs.twimg.com/media/HT9pyHnWYAAM3HY?format=jpg&name=4096x4096",
+                "caption": "Apple M5 Annotated Micro-Architecture Floorplan (4 Super + 6E Cores, SemiAnalysis)"
+            },
+            {
+                "url": "images/die-shots/m5-die-shot-backup.jpg",
+                "originalUrl": "https://pbs.twimg.com/media/HS9wa9vbgAAb2Mm?format=webp&name=large",
+                "caption": "Apple M5 Silicon Die Shot Overview (3nm TSMC N3P, 154 mm²)"
+            }
+        ],
+        "specs": "Apple M5 @ 4.6 GHz (4 Super + 6E CPU cores, 10 GPU cores, 16 MB SLC, 128-bit LPDDR5X-9600), 153.6 GB/s, 3nm (TSMC N3P)"
     },
     {
         "chip": "M4 Max",
@@ -338,7 +354,13 @@ PROCESSORS_DATA = [
                 "description": "Full 512-bit memory bus configuration (409.6 GB/s)"
             }
         ],
-        "specs": "Apple M3 Max @ 4.1 GHz (12P + 4E CPU cores, 40 GPU cores, 48 MB SLC, 512-bit LPDDR5-6400), 307.2 - 409.6 GB/s, 3nm (TSMC N3B)"
+        "specs": "Apple M3 Max @ 4.1 GHz (12P + 4E CPU cores, 40 GPU cores, 48 MB SLC, 512-bit LPDDR5-6400), 307.2 - 409.6 GB/s, 3nm (TSMC N3B)",
+        "dieShots": [
+            {
+                "url": "images/die-shots/m3-max-die-shot-1.png",
+                "caption": "Apple M3 Max Silicon Die Shot (3nm TSMC N3B, 92B transistors)"
+            }
+        ]
     },
     {
         "chip": "M3 Pro",
@@ -364,6 +386,12 @@ PROCESSORS_DATA = [
         "memoryType": "LPDDR5-6400",
         "memorySpeed": "6400 MT/s",
         "memoryBandwidth": 153.6,
+        "dieShots": [
+            {
+                "url": "images/die-shots/m3-pro-die-shot-1.png",
+                "caption": "Apple M3 Pro Silicon Die Shot (3nm TSMC N3B, 37B transistors)"
+            }
+        ],
         "specs": "Apple M3 Pro @ 4.1 GHz (6P + 6E CPU cores, 18 GPU cores, 24 MB SLC, 192-bit LPDDR5-6400), 153.6 GB/s, 3nm (TSMC N3B)"
     },
     {
@@ -390,6 +418,12 @@ PROCESSORS_DATA = [
         "memoryType": "LPDDR5-6400",
         "memorySpeed": "6400 MT/s",
         "memoryBandwidth": 102.4,
+        "dieShots": [
+            {
+                "url": "images/die-shots/m3-die-shot-1.png",
+                "caption": "Apple M3 Silicon Die Shot (3nm TSMC N3B, 25B transistors)"
+            }
+        ],
         "specs": "Apple M3 @ 4.1 GHz (4P + 4E CPU cores, 10 GPU cores, 8 MB SLC, 128-bit LPDDR5-6400), 102.4 GB/s, 3nm (TSMC N3B)"
     },
     {
@@ -1079,9 +1113,11 @@ def enrich():
 
         # 3. CPU Core split
         if 'coreConfig' not in d or not d['coreConfig']:
-            if p_info and 'coreConfig' in p_info and 'pCores' in p_info and 'eCores' in p_info:
-                d['pCores'] = p_info['pCores']
-                d['eCores'] = p_info['eCores']
+            if p_info and 'coreConfig' in p_info:
+                if 'superCores' in p_info:
+                    d['superCores'] = p_info['superCores']
+                d['pCores'] = p_info.get('pCores', 0)
+                d['eCores'] = p_info.get('eCores', 0)
                 d['coreConfig'] = p_info['coreConfig']
             else:
                 d['pCores'], d['eCores'] = cpu_cores // 2, cpu_cores - (cpu_cores // 2)
@@ -1146,6 +1182,14 @@ def enrich():
         }
         if item.get('ram'):
             dev['ram'] = item['ram']
+        if item.get('superCores') is not None:
+            dev['superCores'] = item['superCores']
+        if item.get('pCores') is not None:
+            dev['pCores'] = item['pCores']
+        if item.get('eCores') is not None:
+            dev['eCores'] = item['eCores']
+        if item.get('coreConfig'):
+            dev['coreConfig'] = item['coreConfig']
         dev['cpuCores'] = item['cpuCores']
         dev['gpuCores'] = item['gpuCores']
         dev['clock'] = item['clock']

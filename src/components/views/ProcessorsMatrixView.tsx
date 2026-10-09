@@ -19,12 +19,13 @@ import {
   Calendar
 } from 'lucide-react';
 import { Card } from '../common/Card';
-import { ProcessorDetail, ProcessedItem, FilterMode } from '../../types';
+import { ProcessorDetail, ProcessedItem, FilterMode, DieShot } from '../../types';
 import { FAMILY_COLORS, TIER_COLORS, TIER_LABELS, formatReleaseDate } from '../../constants';
 import { ProcessorCard, ProcessorBenchmarkStats } from '../silicon/ProcessorCard';
 import { DieFloorplanVisual } from '../silicon/DieFloorplanVisual';
 import { ChipIconSvg } from '../silicon/ChipIconSvg';
 import { DieShotGallery } from '../gallery/DieShotGallery';
+import { DieShotViewerModal } from '../gallery/DieShotViewerModal';
 
 export interface ProcessorsMatrixViewProps {
   filteredProcessors: ProcessorDetail[];
@@ -58,7 +59,11 @@ export const ProcessorsMatrixView: React.FC<ProcessorsMatrixViewProps> = ({
 }) => {
   const [displayLayout, setDisplayLayout] = useState<DisplayLayout>('cards');
   const [sortBy, setSortBy] = useState<SortBy>('releaseDate');
-  const [activeDieShotLightbox, setActiveDieShotLightbox] = useState<{ url: string; caption: string } | null>(null);
+  const [activeDieShotViewer, setActiveDieShotViewer] = useState<{
+    dieShots: DieShot[];
+    initialIndex?: number;
+    chipName?: string;
+  } | null>(null);
 
   // Compute benchmark statistics per processor from runtime benchmark dataset
   const processorStatsMap = useMemo<Record<string, ProcessorBenchmarkStats>>(() => {
@@ -180,7 +185,7 @@ export const ProcessorsMatrixView: React.FC<ProcessorsMatrixViewProps> = ({
             </h2>
             
             <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Explore the complete physical packaging, microarchitecture floorplans, TSMC fabrication nodes (2nm GAA Nanosheet to 5nm FinFET), unified memory topologies, and verified 4K microscope die shots across M1 through M6 and A-Series.
+              Explore the complete physical packaging, microarchitecture floorplans, TSMC fabrication nodes (2nm GAA Nanosheet to 5nm FinFET), unified memory topologies, and verified microscope die shots across M1 through M6 and A-Series.
             </p>
           </div>
 
@@ -195,8 +200,8 @@ export const ProcessorsMatrixView: React.FC<ProcessorsMatrixViewProps> = ({
               <span className="text-xs sm:text-sm font-bold text-purple-400 font-mono">1,365 GB/s</span>
             </div>
             <div className="bg-slate-800/60 backdrop-blur border border-slate-700/60 rounded-xl p-2.5 text-center col-span-2 sm:col-span-1">
-              <span className="text-[10px] text-slate-400 font-mono block">REAL 4K DIE SHOTS</span>
-              <span className="text-xs sm:text-sm font-bold text-emerald-400 font-mono">M6 · A20 · A20 Pro</span>
+              <span className="text-[10px] text-slate-400 font-mono block">MICROSCOPE DIE SHOTS</span>
+              <span className="text-xs sm:text-sm font-bold text-emerald-400 font-mono">M6 · M5 · A20 · A20 Pro</span>
             </div>
           </div>
         </div>
@@ -287,7 +292,13 @@ export const ProcessorsMatrixView: React.FC<ProcessorsMatrixViewProps> = ({
               globalMaxBandwidth={globalMaxBandwidth}
               onSelectProcessor={onSelectProcessor}
               onFilterDevices={onFilterDevices}
-              onOpenDieShotLightbox={(dieShot) => setActiveDieShotLightbox(dieShot)}
+              onOpenDieShotLightbox={(dieShot, allDieShots, chipName) => {
+                setActiveDieShotViewer({
+                  dieShots: allDieShots && allDieShots.length > 0 ? allDieShots : [dieShot],
+                  initialIndex: allDieShots ? Math.max(0, allDieShots.findIndex((s) => s.url === dieShot.url)) : 0,
+                  chipName: chipName || processor.name,
+                });
+              }}
             />
           ))}
           {sortedProcessors.length === 0 && (
@@ -411,9 +422,21 @@ export const ProcessorsMatrixView: React.FC<ProcessorsMatrixViewProps> = ({
                               <span className="text-[9px] px-1 py-0.2 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded font-medium">RT</span>
                             )}
                             {p.dieShots && p.dieShots.length > 0 && (
-                              <span className="text-[9px] px-1.5 py-0.2 bg-purple-50 text-purple-700 border border-purple-200 rounded font-medium flex items-center gap-0.5" title="4K Die shot available">
-                                <ImageIcon className="w-2.5 h-2.5" /> 4K Die Shot
-                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveDieShotViewer({
+                                    dieShots: p.dieShots!,
+                                    initialIndex: 0,
+                                    chipName: p.name,
+                                  });
+                                }}
+                                className="text-[9px] px-1.5 py-0.5 bg-purple-50 hover:bg-purple-100 text-purple-700 hover:text-purple-900 border border-purple-200 rounded font-medium flex items-center gap-0.5 transition cursor-pointer" 
+                                title="Inspect Die Shot"
+                              >
+                                <ImageIcon className="w-2.5 h-2.5 text-purple-600" /> Die Shot
+                              </button>
                             )}
                           </div>
                         </div>
@@ -500,37 +523,15 @@ export const ProcessorsMatrixView: React.FC<ProcessorsMatrixViewProps> = ({
         </Card>
       )}
 
-      {/* Global 4K Die Shot Lightbox */}
-      {activeDieShotLightbox && (
-        <div 
-          className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-6 bg-slate-950/85 backdrop-blur-md animate-fade-in"
-          onClick={() => setActiveDieShotLightbox(null)}
-        >
-          <div 
-            className="relative max-w-4xl max-h-[92vh] bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-3 px-4 border-b border-slate-800 flex items-center justify-between bg-slate-900 text-white">
-              <div>
-                <h4 className="text-xs sm:text-sm font-bold text-white">{activeDieShotLightbox.caption}</h4>
-                <p className="text-[10px] text-slate-400">Microscopic Silicon Floorplan & Die Architecture</p>
-              </div>
-              <button 
-                onClick={() => setActiveDieShotLightbox(null)} 
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-2 overflow-auto flex items-center justify-center bg-black/80 max-h-[75vh]">
-              <img 
-                src={activeDieShotLightbox.url} 
-                alt={activeDieShotLightbox.caption} 
-                className="max-h-[72vh] max-w-full object-contain rounded-lg"
-              />
-            </div>
-          </div>
-        </div>
+      {/* Global Fullscreen Die Shot Viewer */}
+      {activeDieShotViewer && (
+        <DieShotViewerModal
+          isOpen={Boolean(activeDieShotViewer)}
+          onClose={() => setActiveDieShotViewer(null)}
+          dieShots={activeDieShotViewer.dieShots}
+          initialIndex={activeDieShotViewer.initialIndex ?? 0}
+          chipName={activeDieShotViewer.chipName || 'Apple Silicon'}
+        />
       )}
     </div>
   );
